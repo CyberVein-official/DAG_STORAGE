@@ -1,0 +1,218 @@
+1.5.5
+    - Javadoc on API command methods (#943)
+    - Parse case insensitive boolean text (#966)
+    - re-enable `--remote` flag - opens API interface to all hosts (#953)
+    - fix generics in RocksDbPersistenceProvider (#956)
+    - Fix milestone start index default value (#941)
+    - Enable batch deletion in rocksDB (#939)
+    - Refactor Configuration (#910)
+    - Some TransactionValidator fixes regarding solidity (#913)
+    - Remove checkSolidity mocks (#908)
+    - Fix: TransactionValidator instance based / TransactionRequester fixed (#914)
+    - Changed Dockerfile to source java and maven from precompiled docker containers. (#929)
+    - Fix grammar in API responses (#884)
+    - Fix error in log statement (#829)
+    - Move sleep inside spawnSolidTransactionsPropagation loop (#911)
+    - Fix solidity propagation from bottom to top (#907)
+
+1.5.4
+   - Update snapshot to 2018-09-17 17:00 UTC (#989)
+
+1.5.3
+   - Remove WalkValidator cache of tips that are below max depth (#903)
+
+1.5.2
+   - Fail early on below max depth and don't solidify on api calls (#883)
+   - Two new configurations added: "max-depth-tx-limit" and "--walk-validator-cache"
+   - Replace all trit representations from int[] to byte[] (#879)
+
+1.5.1
+    - Update snapshot to 2018-07-09 8:00 UTC (#855)
+
+1.5.0
+    - Rework of the Tip Selection algorithm (#778)
+    - Validate the alpha value (#817)
+    - TipSelection: update API reference (#773)
+    - Inserted check for number of available processors. (#758)
+    - Improved Docker support (#744)
+    - Faster PearlDiver (PoW) (#733)
+    - Kerl hashing speed improvement (#628)
+    - Logging routing rework (#727)
+
+    Minor changes and fixes
+    - Fixed `attachmentTimestampUpperBound` value (#777)
+    - Fixed `getBalances` `tips` parameter parsing (#776)
+    - Added hash to `tx_trytes` ZMQ topic (#739)
+
+1.4.2.4
+    - Tag indexing (#728)
+    - TCP networking issues fixed (#592)
+    - Running node on testnet is a flag away (#610)
+    - Improved milestone solidity tracking (#486)
+    - ZMQ sending issues fixed (#569)
+    
+1.4.2.2
+    - Fix locking issue (#534)
+    - Fix internal snapshot consistency checks 
+    - Update jeromq dependency to 0.4.3 (#544)
+
+1.4.2.1
+    - Add wasAddressSpentFrom API call
+    - Bugfix in getInclusionStates
+    - Bugfix in getTransactionsToApprove
+    - Update Snapshot to 20180128 16:00 UTC (#512)
+
+1.4.1.7
+    - fixes snapshot copies
+    - removes extra bundles lookup from validation
+
+1.4.1.6
+    - fixes stale tcp connections
+    - fixes solid milestone getting stuck (regression)
+    - enables checking balance based on tips
+    - enables API Rate limit for new transacitons
+
+1.4.1.4
+    - Improved memory allocation
+    - add checkConsistency API call for transaction promotion
+    - Upgrade to BouncyCastle 1.58
+    - limit inflow of new transactions from single neighbor/user
+
+1.4.1.2
+    - Fixes DB over-storing transactions due to concurrency
+    - Upgrade to RocksDB 5.7.3
+    - Upgrades findTransaction logic to match spec (Multi-field intersection, Input field limits)
+    - Unified API input validation
+
+1.4.1.1
+    - Fixes CORS issue introduced with last release
+    - attachToTangle no longer overwrites tag field unconditionally
+
+1.4.1
+    - Updated IXI
+    - Updated Snapshot & Milestone
+
+1.4.0
+    - Snapshot at milestone 217000
+    - Added Curl-P-81 and moved most operations to it (see https://github.com/iotaledger/kerl)
+    - Adjusted transaction structure - added attachment timestamp 
+    - Adjusted PoW implementation to set attachment timestamp
+    - Disable Curl signatures for snapshot addresses
+
+1.3.2.2
+    - Reorganized milestone rescan to improve update time
+
+1.3.2.1
+    - Add milestone index parsing checks
+    - Clear all milestone cache with --revalidate
+1.3.2
+    - Dockerfile: Updated for docker hub usage
+    - Tip Selection: Skip over signature reuses
+
+1.3.1
+    - fixed tip selection walk regression
+
+1.3.0
+    - added Kerl as an additional hash function.
+    - Tips: improved memory consumption and IRI loading time.
+    - ZMQ:  tx topic only publishes newly stored transactions
+            tx arrival time added.
+            timestamps normalized to seconds.r
+    - DB: cache size increase, to reduce flushes to disk (user-configurable)
+    - Node: faster broadcast priority queue
+            DNS refresher is now user-configurable, for troubleshooting reverse-DNS issues.
+    - TipSelection: bugfixes & optimizations to MCMC.
+    - First snapshot as a part of 3-step phasing to the final design of transaction structure
+
+1.2.4
+    - optimized tip selection - added maxDepth
+    - match address and *ports* of TCP/UDP neighbors
+    - load tips on IRI start-up
+
+1.2.3
+    - fixed IXI script reload
+    - added optional request propagation
+
+1.2.2
+    - fixed random tip requests
+    - added tests and cleaned some code
+
+1.2.1
+    - cleaner API messaging
+
+1.2.0
+    - Mainnet release with MWM 15
+    - Snapshot
+    - Manual claims
+
+1.1.4.3
+    - support for security 3 txs
+    - fixed db batch saving bug
+    - rescan feature added
+
+1.1.4.2
+    - Fixed memory leaks
+    - maxDepth added to TipSelection
+
+1.1.4.1
+    - Fixed claiming issue
+
+1.1.4
+    - Mainnet Release with MWM 13
+
+1.1.3.10
+    - Fixed memory allocation
+    - Refactored classes away from static instances to allow for greater integration testing
+    - Added check to prevent confirmed bundles from being re-confirmed on replay
+
+1.1.3.9
+    - Vastly refactored persistency and solidity functions.
+	
+1.1.3.4
+    - Added RocksDB initialization logs
+
+1.1.3.4
+    - RocksDB dispose fixes
+
+1.1.3.3
+    - Simulation upgrades
+
+1.1.3.2
+    - RocksDB integration
+	
+1.1.3.1
+    - TCP transaction transport and replicator
+
+1.1.2.9:
+    - Program argument to set timestamp filter for incoming txs
+
+1.1.2.8:
+    - Tip selection with depth control
+
+1.1.2.7:
+    - More fixes to tip selector
+
+1.1.2.6:
+    - Merge with dev branch
+	- Fixes tip selector
+
+1.1.2.3:
+
+    - Promoted DNS resolver from experimental (-e) to be activated by default
+    - Implemented experimental random tip selector and broadcaster (to be activated with -e)
+    - API statements log counter
+    - added JRE version to GetNodeInfo
+    - fixed regression with AttachToTangle in combination with PearlDiver update
+    - PearDiver update
+    - UTF-8 Logo
+    - Enabling --remote access
+
+1.1.2.2:
+
+    - DNS resolver
+    - Peerless node
+    - CP437 Logo
+    - getTransactionToApprove lock
+    - preventing getTransactionToToApprove on an unsync tangle
+    - reducing log noise.
+    - general bug fixing
