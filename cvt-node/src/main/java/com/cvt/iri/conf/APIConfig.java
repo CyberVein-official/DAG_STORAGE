@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Configurations for node API
  */
-public interface APIConfig extends Config {
+public interface APIConfig {
 
 
     /**
