@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
  * CVT配置
  *
  * @author cvt admin
- * Time: 2018/11/10 : 11:28
+ * Time:
  */
 @Configuration
 public class CvtConfig {

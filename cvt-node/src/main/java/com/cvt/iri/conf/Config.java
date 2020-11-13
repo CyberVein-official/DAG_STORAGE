@@ -21,4 +21,6 @@ public interface Config {
 
          protected static final String PROB_OF = "A number between 0 and 1 that represents the probability of ";
      }
+
 }
+

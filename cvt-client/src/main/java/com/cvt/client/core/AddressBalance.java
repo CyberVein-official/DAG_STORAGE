@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 /**
  * AddressBalance
  * @author cvt admin
- * Time: 2018/11/19 : 15:49
+ * Time:
  */
 @Data
 @EqualsAndHashCode
