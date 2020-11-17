@@ -16,3 +16,4 @@ public class ValidationException extends Exception {
         super(msg);
     }
 }
+
