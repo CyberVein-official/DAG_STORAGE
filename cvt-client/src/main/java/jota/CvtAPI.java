@@ -1,19 +1,12 @@
 package jota;
 
-import jota.dto.response.*;
-import jota.error.ArgumentException;
 import jota.error.BaseException;
-import jota.error.NotPromotableException;
-import jota.model.Input;
 import jota.pow.ICurl;
 import jota.pow.SpongeFactory;
-import jota.utils.BundleValidator;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 /**

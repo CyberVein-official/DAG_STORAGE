@@ -1,6 +1,5 @@
 package jota.utils;
 
-import jota.error.ArgumentException;
 import jota.model.Bundle;
 import jota.model.Transaction;
 import jota.pow.ICurl;
