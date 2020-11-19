@@ -209,6 +209,88 @@ public class CvtAPI extends CvtAPICore {
         }
         return GetTransferResponse.create(new Bundle[]{}, stopWatch.getElapsedTimeMili());
     }
+    /**
+     * Internal function to get the formatted bundles of a list of addresses.
+     *
+     * @param addresses       List of addresses.
+     * @param inclusionStates If <code>true</code>, it gets the inclusion states of the transfers.
+     * @return A Transaction objects.
+     * @throws ArgumentException is thrown when the specified input is not valid.
+     */
+    public Bundle[] bundlesFromAddresses(String[] addresses, final Boolean inclusionStates) throws ArgumentException {
+
+        List<Transaction> trxs = findTransactionObjectsByAddresses(addresses);
+        // set of tail transactions
+        List<String> tailTransactions = new ArrayList<>();
+        List<String> nonTailBundleHashes = new ArrayList<>();
+
+        for (Transaction trx : trxs) {
+            // Sort tail and nonTails
+            if (trx.getCurrentIndex() == 0) {
+                tailTransactions.add(trx.getHash());
+            } else {
+                if (nonTailBundleHashes.indexOf(trx.getBundle()) == -1) {
+                    nonTailBundleHashes.add(trx.getBundle());
+                }
+            }
+        }
+
+        List<Transaction> bundleObjects = findTransactionObjectsByBundle(nonTailBundleHashes.toArray(new String[nonTailBundleHashes.size()]));
+        for (Transaction trx : bundleObjects) {
+            // Sort tail and nonTails
+            if (trx.getCurrentIndex() == 0) {
+                if (tailTransactions.indexOf(trx.getHash()) == -1) {
+                    tailTransactions.add(trx.getHash());
+                }
+            }
+        }
+
+        final List<Bundle> finalBundles = new ArrayList<>();
+        final String[] tailTxArray = tailTransactions.toArray(new String[tailTransactions.size()]);
+
+        // If inclusionStates, get the confirmation status
+        // of the tail transactions, and thus the bundles
+        GetInclusionStateResponse gisr = null;
+        if (tailTxArray.length != 0 && inclusionStates) {
+            gisr = getLatestInclusion(tailTxArray);
+            if (gisr == null || gisr.getStates() == null || gisr.getStates().length == 0) {
+                throw new IllegalStateException(Constants.GET_INCLUSION_STATE_RESPONSE_ERROR);
+            }
+        }
+        final GetInclusionStateResponse finalInclusionStates = gisr;
+        Parallel.For(Arrays.asList(tailTxArray),
+                new Parallel.Operation<String>() {
+                    public void perform(String param) {
+
+                        try {
+                            GetBundleResponse bundleResponse = getBundle(param);
+                            Bundle gbr = new Bundle(bundleResponse.getTransactions(), bundleResponse.getTransactions().size());
+                            if (gbr.getTransactions() != null) {
+                                if (inclusionStates) {
+                                    boolean thisInclusion = false;
+                                    if (finalInclusionStates != null) {
+                                        thisInclusion = finalInclusionStates.getStates()[Arrays.asList(tailTxArray).indexOf(param)];
+                                    }
+                                    for (Transaction t : gbr.getTransactions()) {
+                                        t.setPersistence(thisInclusion);
+                                    }
+                                }
+                                finalBundles.add(gbr);
+                            }
+                            // If error returned from getBundle, simply ignore it because the bundle was most likely incorrect
+                        } catch (ArgumentException e) {
+                            log.warn(Constants.GET_BUNDLE_RESPONSE_ERROR);
+                        }
+                    }
+                });
+
+        Collections.sort(finalBundles);
+        Bundle[] returnValue = new Bundle[finalBundles.size()];
+        for (int i = 0; i < finalBundles.size(); i++) {
+            returnValue[i] = new Bundle(finalBundles.get(i).getTransactions(), finalBundles.get(i).getTransactions().size());
+        }
+        return returnValue;
+    }
 
 
 }
