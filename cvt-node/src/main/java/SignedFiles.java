@@ -62,11 +62,11 @@ public class SignedFiles {
                 if (trytes == null) {
                     throw new IllegalArgumentException("TRYTES IS NULL. INPUT= '" + line + "'");
                 }
+
                 Converter.trits(trytes, buffer, 0);
                 curl.absorb(buffer, 0, buffer.length);
                 Arrays.fill(buffer, (byte) 0);
             });
-
             byte[] signature = new byte[Curl.HASH_LENGTH];
             curl.squeeze(signature, 0, Curl.HASH_LENGTH);
             return signature;

@@ -292,5 +292,79 @@ public class CvtAPI extends CvtAPICore {
         return returnValue;
     }
 
+    /**
+     * Wrapper function that stores and broadcasts the specified trytes.
+     *
+     * @param trytes The trytes.
+     * @return A BroadcastTransactionsResponse.
+     * @throws ArgumentException is thrown when the specified input is not valid.
+     */
+    public BroadcastTransactionsResponse storeAndBroadcast(final String... trytes) throws ArgumentException {
+
+        if (!InputValidator.isArrayOfAttachedTrytes(trytes)) {
+            throw new ArgumentException(Constants.INVALID_TRYTES_INPUT_ERROR);
+        }
+
+        try {
+            storeTransactions(trytes);
+        } catch (Exception e) {
+            throw new ArgumentException(e.toString());
+        }
+        return broadcastTransactions(trytes);
+    }
+
+    /**
+     * Facade method: Gets transactions to approve, attaches to Tangle, broadcasts and stores.
+     *
+     * @param trytes             The trytes.
+     * @param depth              The depth.
+     * @param minWeightMagnitude The minimum weight magnitude.
+     * @param reference          Hash of transaction to start random-walk from, used to make sure the tips returned reference a given transaction in their past.
+     * @return Transactions objects.
+     * @throws ArgumentException is thrown when invalid trytes is provided.
+     */
+    public List<Transaction> sendTrytes(final String[] trytes, final int depth, final int minWeightMagnitude, final String reference) throws ArgumentException {
+        final GetTransactionsToApproveResponse txs = getTransactionsToApprove(depth, reference);
+
+        // attach to tangle - do pow
+        final GetAttachToTangleResponse res = attachToTangle(txs.getTrunkTransaction(), txs.getBranchTransaction(), minWeightMagnitude, trytes);
+
+        try {
+            storeAndBroadcast(res.getTrytes());
+        } catch (ArgumentException e) {
+            return new ArrayList<>();
+        }
+
+        final List<Transaction> trx = new ArrayList<>();
+
+        for (final String tryte : Arrays.asList(res.getTrytes())) {
+            trx.add(new Transaction(tryte, customCurl.clone()));
+        }
+        return trx;
+    }
+
+    /**
+     * Wrapper function for getTrytes and transactionObjects.
+     * Gets the trytes and transaction object from a list of transaction hashes.
+     *
+     * @param hashes The hashes
+     * @return Transaction objects.
+     **/
+    public List<Transaction> findTransactionsObjectsByHashes(String[] hashes) throws ArgumentException {
+
+        if (!InputValidator.isArrayOfHashes(hashes)) {
+            throw new IllegalStateException(Constants.INVALID_HASHES_INPUT_ERROR);
+        }
+
+        final GetTrytesResponse trytesResponse = getTrytes(hashes);
+
+        final List<Transaction> trxs = new ArrayList<>();
+
+        for (final String tryte : trytesResponse.getTrytes()) {
+            trxs.add(new Transaction(tryte, customCurl.clone()));
+        }
+        return trxs;
+    }
+
 
 }
