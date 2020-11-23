@@ -4,7 +4,6 @@ import com.cvt.iri.model.Address;
 import com.cvt.iri.model.Hash;
 import com.cvt.iri.storage.Indexable;
 import com.cvt.iri.storage.Persistable;
-import com.cvt.iri.storage.Tangle;
 import com.cvt.iri.utils.Pair;
 
 import java.util.Set;

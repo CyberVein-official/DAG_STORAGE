@@ -366,5 +366,56 @@ public class CvtAPI extends CvtAPICore {
         return trxs;
     }
 
+    /**
+     * Wrapper function for findTransactions, getTrytes and transactionObjects.
+     * Returns the transactionObject of a transaction hash. The input can be a list of valid addresses.
+     *
+     * @param addresses The addresses.
+     * @return Transactions.
+     **/
+    public List<Transaction> findTransactionObjectsByAddresses(String[] addresses) throws ArgumentException {
+        List<String> addressesWithoutChecksum = new ArrayList<>();
 
+        for (String address : addresses) {
+            String addressO = Checksum.removeChecksum(address);
+            addressesWithoutChecksum.add(addressO);
+        }
+
+        FindTransactionResponse ftr = findTransactions(addressesWithoutChecksum.toArray(new String[]{}), null, null, null);
+        if (ftr == null || ftr.getHashes() == null)
+            return new ArrayList<>();
+        // get the transaction objects of the transactions
+        return findTransactionsObjectsByHashes(ftr.getHashes());
+    }
+
+    /**
+     * Wrapper function for findTransactions, getTrytes and transactionObjects.
+     * Returns the transactionObject of a transaction hash. The input can be a list of valid tags.
+     *
+     * @param tags The tags.
+     * @return Transactions.
+     **/
+    public List<Transaction> findTransactionObjectsByTag(String[] tags) throws ArgumentException {
+        FindTransactionResponse ftr = findTransactions(null, tags, null, null);
+        if (ftr == null || ftr.getHashes() == null)
+            return new ArrayList<>();
+        // get the transaction objects of the transactions
+        return findTransactionsObjectsByHashes(ftr.getHashes());
+    }
+
+
+    /**
+     * Wrapper function for findTransactions, getTrytes and transactionObjects.
+     * Returns the transactionObject of a transaction hash. The input can be a list of valid approvees.
+     *
+     * @param approvees The approvees.
+     * @return Transactions.
+     **/
+    public List<Transaction> findTransactionObjectsByApprovees(String[] approvees) throws ArgumentException {
+        FindTransactionResponse ftr = findTransactions(null, null, approvees, null);
+        if (ftr == null || ftr.getHashes() == null)
+            return new ArrayList<>();
+        // get the transaction objects of the transactions
+        return findTransactionsObjectsByHashes(ftr.getHashes());
+    }
 }

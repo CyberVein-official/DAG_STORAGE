@@ -5,7 +5,6 @@ import com.cvt.iri.model.ObsoleteTag;
 import com.cvt.iri.model.Tag;
 import com.cvt.iri.storage.Indexable;
 import com.cvt.iri.storage.Persistable;
-import com.cvt.iri.storage.Tangle;
 import com.cvt.iri.utils.Pair;
 
 import java.util.HashMap;
