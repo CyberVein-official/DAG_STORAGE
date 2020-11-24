@@ -50,6 +50,8 @@ public class SignedFiles {
         }
     }
 
+
+
     private static byte[] digestFile(String filename, Sponge curl) throws IOException {
         try (InputStream inputStream = SignedFiles.class.getResourceAsStream(filename);
              BufferedReader reader = new BufferedReader((inputStream == null)

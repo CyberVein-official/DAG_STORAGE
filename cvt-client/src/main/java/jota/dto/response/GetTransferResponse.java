@@ -19,6 +19,7 @@ public class GetTransferResponse extends AbstractResponse {
         return res;
     }
 
+
     /**
      * Gets the transfer bundle.
      *

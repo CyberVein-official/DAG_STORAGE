@@ -418,4 +418,261 @@ public class CvtAPI extends CvtAPICore {
         // get the transaction objects of the transactions
         return findTransactionsObjectsByHashes(ftr.getHashes());
     }
+
+
+    /**
+     * Wrapper function for findTransactions, getTrytes and transactionObjects.
+     * Returns the transactionObject of a transaction hash. The input can be a list of valid bundles.
+     * findTransactions input
+     *
+     * @param bundles The bundles.
+     * @return Transactions.
+     **/
+    public List<Transaction> findTransactionObjectsByBundle(String[] bundles) throws ArgumentException {
+        FindTransactionResponse ftr = findTransactions(null, null, null, bundles);
+        if (ftr == null || ftr.getHashes() == null)
+            return new ArrayList<>();
+
+        // get the transaction objects of the transactions
+        return findTransactionsObjectsByHashes(ftr.getHashes());
+    }
+
+
+    /**
+     * Prepares transfer by generating bundle, finding and signing inputs.
+     *
+     * @param seed           Tryte-encoded private key / seed.
+     * @param security       The security level of private key / seed.
+     * @param transfers      Array of transfer objects.
+     * @param remainder      If defined, this address will be used for sending the remainder value (of the inputs) to.
+     * @param inputs         The inputs.
+     * @param tips           The starting points we walk back from to find the balance of the addresses
+     * @param validateInputs whether or not to validate the balances of the provided inputs
+     * @return Returns bundle trytes.
+     * @throws ArgumentException is thrown when the specified input is not valid.
+     */
+    public List<String> prepareTransfers(String seed, int security, final List<Transfer> transfers, String remainder, List<Input> inputs, List<Transaction> tips, boolean validateInputs) throws ArgumentException {
+
+        // validate seed
+        if ((!InputValidator.isValidSeed(seed))) {
+            throw new IllegalStateException(Constants.INVALID_SEED_INPUT_ERROR);
+        }
+
+        if (!InputValidator.isValidSecurityLevel(security)) {
+            throw new ArgumentException(Constants.INVALID_SECURITY_LEVEL_INPUT_ERROR);
+        }
+
+        // Input validation of transfers object
+        if (!InputValidator.isTransfersCollectionValid(transfers)) {
+            throw new ArgumentException(Constants.INVALID_TRANSFERS_INPUT_ERROR);
+        }
+
+        // Create a new bundle
+        final Bundle bundle = new Bundle();
+        final List<String> signatureFragments = new ArrayList<>();
+
+        long totalValue = 0;
+        String tag = "";
+        //  Iterate over all transfers, get totalValue
+        //  and prepare the signatureFragments, message and tag
+        for (final Transfer transfer : transfers) {
+
+            // remove the checksum of the address if provided
+            if (Checksum.isValidChecksum(transfer.getAddress())) {
+                transfer.setAddress(Checksum.removeChecksum(transfer.getAddress()));
+            }
+
+            int signatureMessageLength = 1;
+
+            // If message longer than 2187 trytes, increase signatureMessageLength (add 2nd transaction)
+            if (transfer.getMessage().length() > Constants.MESSAGE_LENGTH) {
+
+                // Get total length, message / maxLength (2187 trytes)
+                signatureMessageLength += Math.floor(transfer.getMessage().length() / Constants.MESSAGE_LENGTH);
+
+                String msgCopy = transfer.getMessage();
+
+                // While there is still a message, copy it
+                while (!msgCopy.isEmpty()) {
+
+                    String fragment = StringUtils.substring(msgCopy, 0, Constants.MESSAGE_LENGTH);
+                    msgCopy = StringUtils.substring(msgCopy, Constants.MESSAGE_LENGTH, msgCopy.length());
+
+                    // Pad remainder of fragment
+
+                    fragment = StringUtils.rightPad(fragment, Constants.MESSAGE_LENGTH, '9');
+
+                    signatureFragments.add(fragment);
+                }
+            } else {
+                // Else, get single fragment with 2187 of 9's trytes
+                String fragment = transfer.getMessage();
+
+                if (transfer.getMessage().length() < Constants.MESSAGE_LENGTH) {
+                    fragment = StringUtils.rightPad(fragment, Constants.MESSAGE_LENGTH, '9');
+                }
+                signatureFragments.add(fragment);
+            }
+
+            tag = transfer.getTag();
+
+            // pad for required 27 tryte length
+            if (transfer.getTag().length() < Constants.TAG_LENGTH) {
+                tag = StringUtils.rightPad(tag, Constants.TAG_LENGTH, '9');
+            }
+
+
+            // get current timestamp in seconds
+            long timestamp = (long) Math.floor(Calendar.getInstance().getTimeInMillis() / 1000);
+
+            // Add first entry to the bundle
+            bundle.addEntry(signatureMessageLength, transfer.getAddress(), transfer.getValue(), tag, timestamp);
+            // Sum up total value
+            totalValue += transfer.getValue();
+        }
+
+        // Get inputs if we are sending tokens
+        if (totalValue != 0) {
+
+            //  Case 1: user provided inputs
+            //  Validate the inputs by calling getBalances
+            if (inputs != null && !inputs.isEmpty()) {
+
+                if (!validateInputs) {
+                    return addRemainder(seed, security, inputs, bundle, tag, totalValue, remainder, signatureFragments);
+                }
+                // Get list if addresses of the provided inputs
+                List<String> inputsAddresses = new ArrayList<>();
+                for (final Input i : inputs) {
+                    inputsAddresses.add(i.getAddress());
+                }
+
+                List<String> tipHashes = null;
+                if (tips != null) {
+                    tipHashes = new ArrayList<>();
+
+                    for (final Transaction tx: tips) {
+                        tipHashes.add(tx.getHash());
+                    }
+                }
+
+                GetBalancesResponse balancesResponse = getBalances(100, inputsAddresses, tipHashes);
+                String[] balances = balancesResponse.getBalances();
+
+                List<Input> confirmedInputs = new ArrayList<>();
+                long totalBalance = 0;
+
+                for (int i = 0; i < balances.length; i++) {
+                    long thisBalance = Long.parseLong(balances[i]);
+
+                    // If input has balance, add it to confirmedInputs
+                    if (thisBalance > 0) {
+                        totalBalance += thisBalance;
+                        Input inputEl = inputs.get(i);
+                        inputEl.setBalance(thisBalance);
+                        confirmedInputs.add(inputEl);
+
+                        // if we've already reached the intended input value, break out of loop
+                        if (totalBalance >= totalValue) {
+                            log.info("Total balance already reached ");
+                            break;
+                        }
+                    }
+
+                }
+
+                // Return not enough balance error
+                if (totalValue > totalBalance) {
+                    throw new IllegalStateException(Constants.NOT_ENOUGH_BALANCE_ERROR);
+                }
+
+                return addRemainder(seed, security, confirmedInputs, bundle, tag, totalValue, remainder, signatureFragments);
+            }
+
+            //  Case 2: Get inputs deterministically
+            //
+            //  If no inputs provided, derive the addresses from the seed and
+            //  confirm that the inputs exceed the threshold
+            else {
+                GetBalancesAndFormatResponse newinputs = getInputs(seed, security, 0, 0, totalValue);
+
+                // If inputs with enough balance
+                return addRemainder(seed, security, newinputs.getInputs(), bundle, tag, totalValue, remainder, signatureFragments);
+            }
+        } else {
+
+            // If no input required, don't sign and simply finalize the bundle
+            bundle.finalize(customCurl.clone());
+            bundle.addTrytes(signatureFragments);
+
+            List<Transaction> trxb = bundle.getTransactions();
+            List<String> bundleTrytes = new ArrayList<>();
+
+            for (Transaction trx : trxb) {
+                bundleTrytes.add(trx.toTrytes());
+            }
+            Collections.reverse(bundleTrytes);
+            return bundleTrytes;
+        }
+    }
+
+    /**
+     * Gets the inputs of a seed
+     *
+     * @param seed      Tryte-encoded seed. It should be noted that this seed is not transferred.
+     * @param security  The Security level of private key / seed.
+     * @param start     Starting key index.
+     * @param end       Ending key index.
+     * @param threshold Min balance required.
+     * @param tips      The starting points we walk back from to find the balance of the addresses
+     * @throws ArgumentException is thrown when the specified input is not valid.
+     **/
+    public GetBalancesAndFormatResponse getInputs(String seed, int security, int start, int end, long threshold, final String... tips) throws ArgumentException {
+
+        // validate the seed
+        if ((!InputValidator.isValidSeed(seed))) {
+            throw new IllegalStateException(Constants.INVALID_SEED_INPUT_ERROR);
+        }
+
+        if (!InputValidator.isValidSecurityLevel(security)) {
+            throw new ArgumentException(Constants.INVALID_SECURITY_LEVEL_INPUT_ERROR);
+        }
+
+        // If start value bigger than end, return error
+        // or if difference between end and start is bigger than 500 keys
+        if ((start > end && end > 0) || end > (start + 500)) {
+            throw new IllegalStateException(Constants.INVALID_INPUT_ERROR);
+        }
+
+        StopWatch stopWatch = new StopWatch();
+
+        //  Case 1: start and end
+        //
+        //  If start and end is defined by the user, simply iterate through the keys
+        //  and call getBalances
+        if (end != 0) {
+
+            List<String> allAddresses = new ArrayList<>();
+
+            for (int i = start; i < end; i++) {
+
+                String address = CvtAPIUtils.newAddress(seed, security, i, false, customCurl.clone());
+                allAddresses.add(address);
+            }
+
+            return getBalanceAndFormat(allAddresses, Arrays.asList(tips), threshold, start, stopWatch, security);
+        }
+        //  Case 2: iterate till threshold || end
+        //
+        //  Either start from index: 0 or start (if defined) until threshold is reached.
+        //  Calls getNewAddress and deterministically generates and returns all addresses
+        //  We then do getBalance, format the output and return it
+        else {
+            final GetNewAddressResponse res = getNewAddress(seed, security, start, false, 0, true);
+            return getBalanceAndFormat(res.getAddresses(), Arrays.asList(tips), threshold, start, stopWatch, security);
+        }
+    }
+
+
+
 }

@@ -51,4 +51,5 @@ public class CvtCommandRequest {
     public static CvtCommandRequest createInterruptAttachToTangleRequest() {
         return new CvtCommandRequest(CvtAPICommands.INTERRUPT_ATTACHING_TO_TANGLE);
     }
+
 }

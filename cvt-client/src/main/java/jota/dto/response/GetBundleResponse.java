@@ -30,4 +30,5 @@ public class GetBundleResponse extends AbstractResponse {
     public List<Transaction> getTransactions() {
         return transactions;
     }
+
 }
