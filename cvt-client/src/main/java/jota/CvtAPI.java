@@ -673,6 +673,118 @@ public class CvtAPI extends CvtAPICore {
         }
     }
 
+    /**
+     * Gets the balances and formats the output.
+     *
+     * @param addresses The addresses.
+     * @param tips      The starting points we walk back from to find the balance of the addresses
+     * @param threshold Min balance required.
+     * @param start     Starting key index.
+     * @param stopWatch the stopwatch.
+     * @param security  The security level of private key / seed.
+     * @return Inputs object.
+     * @throws ArgumentException is thrown when the specified security level is not valid.
+     **/
+    public GetBalancesAndFormatResponse getBalanceAndFormat(final List<String> addresses, final List<String> tips, long threshold, int start, StopWatch stopWatch, int security) throws ArgumentException, IllegalStateException {
 
+        if (!InputValidator.isValidSecurityLevel(security)) {
+            throw new ArgumentException(Constants.INVALID_SECURITY_LEVEL_INPUT_ERROR);
+        }
+
+        GetBalancesResponse getBalancesResponse = getBalances(100, addresses, tips);
+        List<String> balances = Arrays.asList(getBalancesResponse.getBalances());
+
+        // If threshold defined, keep track of whether reached or not
+        // else set default to true
+
+        boolean thresholdReached = threshold == 0;
+
+        List<Input> inputs = new ArrayList<>();
+        long totalBalance = 0;
+
+        for (int i = 0; i < addresses.size(); i++) {
+
+            long balance = Long.parseLong(balances.get(i));
+
+            if (balance > 0) {
+                final Input newEntry = new Input(addresses.get(i), balance, start + i, security);
+
+                inputs.add(newEntry);
+                // Increase totalBalance of all aggregated inputs
+                totalBalance += balance;
+
+                if (!thresholdReached && totalBalance >= threshold) {
+                    thresholdReached = true;
+                    break;
+                }
+            }
+        }
+
+        if (thresholdReached) {
+            return GetBalancesAndFormatResponse.create(inputs, totalBalance, stopWatch.getElapsedTimeMili());
+        }
+        throw new IllegalStateException(Constants.NOT_ENOUGH_BALANCE_ERROR);
+    }
+
+
+    /**
+     * Gets the associated bundle transactions of a single transaction.
+     * Does validation of signatures, total sum as well as bundle order.
+     *
+     * @param transaction The transaction encoded in trytes.
+     * @return an array of bundle, if there are multiple arrays it means that there are conflicting bundles.
+     * @throws ArgumentException is thrown when the specified input is not valid.
+     */
+    public GetBundleResponse getBundle(String transaction) throws ArgumentException {
+
+        if (!InputValidator.isHash(transaction)) {
+            throw new ArgumentException(Constants.INVALID_HASHES_INPUT_ERROR);
+        }
+
+        StopWatch stopWatch = new StopWatch();
+
+        Bundle bundle = traverseBundle(transaction, null, new Bundle());
+        if (bundle == null) {
+            throw new ArgumentException(Constants.INVALID_BUNDLE_ERROR);
+        }
+
+        if (!BundleValidator.isBundle(bundle)){
+            throw new ArgumentException(Constants.INVALID_BUNDLE_ERROR);
+        }
+
+        return GetBundleResponse.create(bundle.getTransactions(), stopWatch.getElapsedTimeMili());
+    }
+    /**
+     * Similar to getTransfers, just that it returns additional account data
+     *
+     * @param seed            Tryte-encoded seed. It should be noted that this seed is not transferred.
+     * @param security        The Security level of private key / seed.
+     * @param index           Key index to start search from. If the index is provided, the generation of the address is not deterministic.
+     * @param checksum        Adds 9-tryte address checksum.
+     * @param total           Total number of addresses to generate.
+     * @param returnAll       If <code>true</code>, it returns all addresses which were deterministically generated (until findTransactions returns null).
+     * @param start           Starting key index.
+     * @param end             Ending key index.
+     * @param inclusionStates If <code>true</code>, it gets the inclusion states of the transfers.
+     * @param threshold       Min balance required.
+     * @throws ArgumentException is thrown when the specified input is not valid.
+     */
+    public GetAccountDataResponse getAccountData(String seed, int security, int index, boolean checksum, int total, boolean returnAll, int start, int end, boolean inclusionStates, long threshold) throws ArgumentException {
+        if (!InputValidator.isValidSecurityLevel(security)) {
+            throw new ArgumentException(Constants.INVALID_SECURITY_LEVEL_INPUT_ERROR);
+        }
+
+        if (start > end || end > (start + 1000)) {
+            throw new ArgumentException(Constants.INVALID_INPUT_ERROR);
+        }
+
+        StopWatch stopWatch = new StopWatch();
+
+        GetNewAddressResponse gna = getNewAddress(seed, security, index, checksum, total, returnAll);
+        GetTransferResponse gtr = getTransfers(seed, security, start, end, inclusionStates);
+        GetBalancesAndFormatResponse gbr = getInputs(seed, security, start, end, threshold);
+
+        return GetAccountDataResponse.create(gna.getAddresses(), gtr.getTransfers(), gbr.getInputs(), gbr.getTotalBalance(), stopWatch.getElapsedTimeMili());
+    }
 
 }

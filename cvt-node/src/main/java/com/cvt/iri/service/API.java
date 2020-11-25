@@ -4,6 +4,8 @@ import com.alibaba.fastjson.JSON;
 import com.cvt.iri.coinbase.CoinBaseService;
 import com.cvt.iri.coinbase.StandardCoinBaseService;
 import com.cvt.iri.conf.APIConfig;
+import com.cvt.iri.controllers.AddressViewModel;
+import com.cvt.iri.controllers.TransactionViewModel;
 import com.cvt.iri.model.Hash;
 import com.cvt.iri.pdp.MockPdpService;
 import com.cvt.iri.retrofit2.FileHashResponse;
@@ -22,16 +24,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.streams.ChannelInputStream;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.security.InvalidAlgorithmParameterException;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static io.undertow.Handlers.path;
 
@@ -227,7 +229,241 @@ public class API {
         sendResponse(exchange, response, beginningTime);
     }
 
+    private AbstractResponse process(final String requestString, InetSocketAddress sourceAddress) throws UnsupportedEncodingException {
 
+        try {
+
+            final Map<String, Object> request = gson.fromJson(requestString, Map.class);
+            if (request == null) {
+                return ExceptionResponse.create("Invalid request payload: '" + requestString + "'");
+            }
+
+            final String command = (String) request.get("command");
+            if (command == null) {
+                return ErrorResponse.create("COMMAND parameter has not been specified in the request.");
+            }
+
+            if (instance.configuration.getRemoteLimitApi().contains(command) &&
+                    !sourceAddress.getAddress().isLoopbackAddress()) {
+                return AccessLimitedResponse.create("COMMAND " + command + " is not available on this node");
+            }
+
+            log.debug("# {} -> Requesting command '{}'", counter.incrementAndGet(), command);
+
+            switch (command) {
+                case PdpService.VERIFY_STORE_COMMAND: {
+                    final String filePath = (String) request.get("filePath");
+                    log.info("需要验证的文件路径为：{}", filePath);
+                    //pdpService.challenge(filePath);
+                    pdpService.prove(filePath);
+                    return VerifyStorageResponse.create(true);
+                }
+                case "storeMessage": {
+                    if (!testNet) {
+                        return AccessLimitedResponse.create("COMMAND storeMessage is only available on testnet");
+                    }
+
+                    if (!request.containsKey("address") || !request.containsKey("message")) {
+                        return ErrorResponse.create("Invalid params");
+                    }
+
+                    if (invalidSubtangleStatus()) {
+                        return ErrorResponse
+                                .create("This operation cannot be executed: The subtangle has not been updated yet.");
+                    }
+
+                    final String address = (String) request.get("address");
+                    final String message = (String) request.get("message");
+
+                    storeMessageStatement(address, message);
+                    return AbstractResponse.createEmptyResponse();
+                }
+
+                case "addNeighbors": {
+                    List<String> uris = getParameterAsList(request, "uris", 0);
+                    log.debug("Invoking 'addNeighbors' with {}", uris);
+                    return addNeighborsStatement(uris);
+                }
+                case "attachToTangle": {
+                    // 在这里生成账号地址信息
+
+                    final Hash trunkTransaction = new Hash(getParameterAsStringAndValidate(request, "trunkTransaction", HASH_SIZE));
+                    final Hash branchTransaction = new Hash(getParameterAsStringAndValidate(request, "branchTransaction", HASH_SIZE));
+                    final int minWeightMagnitude = getParameterAsInt(request, "minWeightMagnitude");
+
+                    final List<String> trytes = getParameterAsList(request, "trytes", TRYTES_SIZE);
+
+                    List<String> elements = attachToTangleStatement(trunkTransaction, branchTransaction, minWeightMagnitude, trytes);
+                    return AttachToTangleResponse.create(elements);
+                }
+                case "broadcastTransactions": {
+                    // 向其它节点发起广播，告知交易信息
+
+                    final List<String> trytes = getParameterAsList(request, "trytes", TRYTES_SIZE);
+                    broadcastTransactionsStatement(trytes);
+                    return AbstractResponse.createEmptyResponse();
+                }
+                case "findTransactions": {
+                    return findTransactionsStatement(request);
+                }
+                case "attachNewAddress": {
+                    // 生成地址
+                    String seed = (String) request.get("seed");
+                    String addresses = (String) request.get("address");
+                    return NewAddressResponse.create(addresses);
+                }
+                case "getBalances": {
+                    // 获取余额
+
+                    final List<String> addresses = getParameterAsList(request, "addresses", HASH_SIZE);
+                    final List<String> tips = request.containsKey("tips") ?
+                            getParameterAsList(request, "tips", HASH_SIZE) :
+                            null;
+                    final int threshold = getParameterAsInt(request, "threshold");
+                    return getBalancesStatement(addresses, tips, threshold);
+                }
+                case "getInclusionStates": {
+                    if (invalidSubtangleStatus()) {
+                        return ErrorResponse
+                                .create("This operation cannot be executed: The subtangle has not been updated yet.");
+                    }
+                    final List<String> transactions = getParameterAsList(request, "transactions", HASH_SIZE);
+                    final List<String> tips = getParameterAsList(request, "tips", HASH_SIZE);
+
+                    return getInclusionStatesStatement(transactions, tips);
+                }
+                case "getNeighbors": {
+                    return getNeighborsStatement();
+                }
+                case "getNodeInfo": {
+                    return getNodeInfoStatement();
+                }
+                case "getTips": {
+                    return getTipsStatement();
+                }
+                case "getTransactionsToApprove": {
+                    final Optional<Hash> reference = request.containsKey("reference") ?
+                            Optional.of(new Hash(getParameterAsStringAndValidate(request, "reference", HASH_SIZE)))
+                            : Optional.empty();
+                    final int depth = getParameterAsInt(request, "depth");
+                    if (depth < 0 || depth > instance.configuration.getMaxDepth()) {
+                        return ErrorResponse.create("Invalid depth input");
+                    }
+
+                    try {
+                        List<Hash> tips = getTransactionsToApproveStatement(depth, reference);
+                        return GetTransactionsToApproveResponse.create(tips.get(0), tips.get(1));
+
+                    } catch (RuntimeException e) {
+                        log.info("Tip selection failed: " + e.getLocalizedMessage());
+                        return ErrorResponse.create(e.getLocalizedMessage());
+                    }
+                }
+                case "getTrytes": {
+                    final List<String> hashes = getParameterAsList(request, "hashes", HASH_SIZE);
+                    return getTrytesStatement(hashes);
+                }
+
+                case "interruptAttachingToTangle": {
+                    return interruptAttachingToTangleStatement();
+                }
+                case "removeNeighbors": {
+                    List<String> uris = getParameterAsList(request, "uris", 0);
+                    log.debug("Invoking 'removeNeighbors' with {}", uris);
+                    return removeNeighborsStatement(uris);
+                }
+
+                case "storeTransactions": {
+                    // 保存交易信息
+                    try {
+                        final List<String> trytes = getParameterAsList(request, "trytes", TRYTES_SIZE);
+                        storeTransactionsStatement(trytes);
+                        return AbstractResponse.createEmptyResponse();
+                    } catch (Exception e) {
+                        //transaction not valid
+                        log.info("error while storing transaction", e);
+                        return ErrorResponse.create("Invalid trytes input");
+                    }
+                }
+                case "getMissingTransactions": {
+                    //TransactionRequester.instance().rescanTransactionsToRequest();
+                    synchronized (instance.transactionRequester) {
+                        List<String> missingTx = Arrays.stream(instance.transactionRequester.getRequestedTransactions())
+                                .map(Hash::toString)
+                                .collect(Collectors.toList());
+                        return GetTipsResponse.create(missingTx);
+                    }
+                }
+                case "checkConsistency": {
+                    if (invalidSubtangleStatus()) {
+                        return ErrorResponse
+                                .create("This operation cannot be executed: The subtangle has not been updated yet.");
+                    }
+                    final List<String> transactions = getParameterAsList(request, "tails", HASH_SIZE);
+                    return checkConsistencyStatement(transactions);
+                }
+                case "wereAddressesSpentFrom": {
+                    final List<String> addresses = getParameterAsList(request, "addresses", HASH_SIZE);
+                    return wereAddressesSpentFromStatement(addresses);
+                }
+                default: {
+                    AbstractResponse response = ixi.processCommand(command, request);
+                    return response == null ?
+                            ErrorResponse.create("Command [" + command + "] is unknown") :
+                            response;
+                }
+            }
+
+        } catch (final ValidationException e) {
+            log.info("API Validation failed: " + e.getLocalizedMessage());
+            return ErrorResponse.create(e.getLocalizedMessage());
+        } catch (final InvalidAlgorithmParameterException e) {
+            log.info("API InvalidAlgorithmParameter passed: " + e.getLocalizedMessage());
+            return ErrorResponse.create(e.getLocalizedMessage());
+        } catch (final Exception e) {
+            log.error("API Exception: {}", e.getLocalizedMessage(), e);
+            return ExceptionResponse.create(e.getLocalizedMessage());
+        }
+    }
+    /**
+     * Check if a list of addresses was ever spent from, in the current epoch, or in previous epochs.
+     *
+     * @param addresses List of addresses to check if they were ever spent from.
+     * @return {@link com.cvt.iri.service.dto.wereAddressesSpentFrom}
+     **/
+    private AbstractResponse wereAddressesSpentFromStatement(List<String> addresses) throws Exception {
+        final List<Hash> addressesHash = addresses.stream().map(Hash::new).collect(Collectors.toList());
+        final boolean[] states = new boolean[addressesHash.size()];
+        int index = 0;
+
+        for (Hash address : addressesHash) {
+            states[index++] = wasAddressSpentFrom(address);
+        }
+        return wereAddressesSpentFrom.create(states);
+    }
+
+    private boolean wasAddressSpentFrom(Hash address) throws Exception {
+        if (previousEpochsSpentAddresses.containsKey(address)) {
+            return true;
+        }
+        Set<Hash> hashes = AddressViewModel.load(instance.tangle, address).getHashes();
+        for (Hash hash : hashes) {
+            final TransactionViewModel tx = TransactionViewModel.fromHash(instance.tangle, hash);
+            //spend
+            if (tx.value() < 0) {
+                //confirmed
+                if (tx.snapshotIndex() != 0) {
+                    return true;
+                }
+                //pending
+                Hash tail = findTail(hash);
+                if (tail != null && BundleValidator.validate(instance.tangle, tail).size() != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
 
 }
