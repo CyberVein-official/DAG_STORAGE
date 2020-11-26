@@ -11,6 +11,7 @@ import com.cvt.iri.pdp.MockPdpService;
 import com.cvt.iri.retrofit2.FileHashResponse;
 import com.cvt.iri.retrofit2.VerifyStorageResponse;
 import com.cvt.iri.service.dto.*;
+import com.cvt.iri.service.tipselection.impl.WalkValidatorImpl;
 import com.cvt.iri.utils.IotaIOUtils;
 import com.cvt.iri.utils.UrlUtils;
 import com.google.gson.Gson;
@@ -464,6 +465,90 @@ public class API {
         }
         return false;
     }
+    private Hash findTail(Hash hash) throws Exception {
+        TransactionViewModel tx = TransactionViewModel.fromHash(instance.tangle, hash);
+        final Hash bundleHash = tx.getBundleHash();
+        long index = tx.getCurrentIndex();
+        boolean foundApprovee = false;
+        while (index-- > 0 && tx.getBundleHash().equals(bundleHash)) {
+            Set<Hash> approvees = tx.getApprovers(instance.tangle).getHashes();
+            for (Hash approvee : approvees) {
+                TransactionViewModel nextTx = TransactionViewModel.fromHash(instance.tangle, approvee);
+                if (nextTx.getBundleHash().equals(bundleHash)) {
+                    tx = nextTx;
+                    foundApprovee = true;
+                    break;
+                }
+            }
+            if (!foundApprovee) {
+                break;
+            }
+        }
+        if (tx.getCurrentIndex() == 0) {
+            return tx.getHash();
+        }
+        return null;
+    }
+
+    /**
+     * Checks the consistency of the transactions.
+     * Marks state as false on the following checks<br/>
+     * - Transaction does not exist<br/>
+     * - Transaction is not a tail<br/>
+     * - Missing a reference transaction<br/>
+     * - Invalid bundle<br/>
+     * - Tails of tails are invalid<br/>
+     *
+     * @param tails List of transactions you want to check the consistency for
+     * @return {@link com.cvt.iri.service.dto.CheckConsistency}
+     **/
+    private AbstractResponse checkConsistencyStatement(List<String> tails) throws Exception {
+        final List<Hash> transactions = tails.stream().map(Hash::new).collect(Collectors.toList());
+        boolean state = true;
+        String info = "";
+
+        //check transactions themselves are valid
+        for (Hash transaction : transactions) {
+            TransactionViewModel txVM = TransactionViewModel.fromHash(instance.tangle, transaction);
+            if (txVM.getType() == TransactionViewModel.PREFILLED_SLOT) {
+                return ErrorResponse.create("Invalid transaction, missing: " + transaction);
+            }
+            if (txVM.getCurrentIndex() != 0) {
+                return ErrorResponse.create("Invalid transaction, not a tail: " + transaction);
+            }
+
+
+            if (!txVM.isSolid()) {
+                state = false;
+                info = "tails are not solid (missing a referenced tx): " + transaction;
+                break;
+            } else if (BundleValidator.validate(instance.tangle, txVM.getHash()).size() == 0) {
+                state = false;
+                info = "tails are not consistent (bundle is invalid): " + transaction;
+                break;
+            }
+        }
+
+        if (state) {
+            instance.milestone.latestSnapshot.rwlock.readLock().lock();
+            try {
+                WalkValidatorImpl walkValidator = new WalkValidatorImpl(instance.tangle, instance.ledgerValidator,
+                        instance.milestone, instance.configuration);
+                for (Hash transaction : transactions) {
+                    if (!walkValidator.isValid(transaction)) {
+                        state = false;
+                        info = "tails are not consistent (would lead to inconsistent ledger state or below max depth)";
+                        break;
+                    }
+                }
+            } finally {
+                instance.milestone.latestSnapshot.rwlock.readLock().unlock();
+            }
+        }
+
+        return CheckConsistency.create(state, info);
+    }
+
 
 
 }
