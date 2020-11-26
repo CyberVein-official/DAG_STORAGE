@@ -12,7 +12,13 @@ public class IXIResponse extends AbstractResponse {
         return ixiResponse;
     }
 
+
     public Object getResponse() {
         return ixi;
     }
+
 }
+
+
+
+
