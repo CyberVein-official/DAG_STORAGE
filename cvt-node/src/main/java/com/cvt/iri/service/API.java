@@ -549,7 +549,27 @@ public class API {
         return CheckConsistency.create(state, info);
     }
 
+    private double getParameterAsDouble(Map<String, Object> request, String paramName) throws ValidationException {
+        validateParamExists(request, paramName);
+        final double result;
+        try {
+            result = ((Double) request.get(paramName));
+        } catch (ClassCastException e) {
+            throw new ValidationException("Invalid " + paramName + " input");
+        }
+        return result;
+    }
 
+    private int getParameterAsInt(Map<String, Object> request, String paramName) throws ValidationException {
+        validateParamExists(request, paramName);
+        final int result;
+        try {
+            result = ((Double) request.get(paramName)).intValue();
+        } catch (ClassCastException e) {
+            throw new ValidationException("Invalid " + paramName + " input");
+        }
+        return result;
+    }
 
 }
 
