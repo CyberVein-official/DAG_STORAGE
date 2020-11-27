@@ -786,5 +786,87 @@ public class CvtAPI extends CvtAPICore {
 
         return GetAccountDataResponse.create(gna.getAddresses(), gtr.getTransfers(), gbr.getInputs(), gbr.getTotalBalance(), stopWatch.getElapsedTimeMili());
     }
+    /**
+     * Check if a list of addresses was ever spent from, in the current epoch, or in previous epochs.
+     * If the address has a checksum, it is removed
+     *
+     * @param addresses the addresses to check
+     * @return list of address boolean checks
+     * @throws ArgumentException
+     */
+    public boolean[] checkWereAddressSpentFrom(String[] addresses) throws ArgumentException {
+        List<String> rawAddresses=new ArrayList<>();
+        for(String address: addresses) {
+            String rawAddress=null;
+            try {
+                if (Checksum.isAddressWithChecksum(address)) {
+                    rawAddress=Checksum.removeChecksum(address);
+                }
+            } catch (ArgumentException e) {}
+            if(rawAddress==null)
+                rawAddresses.add(address);
+            else
+                rawAddresses.add(rawAddress);
+        }
+        String[] spentAddresses = new String[rawAddresses.size()];
+        spentAddresses = rawAddresses.toArray(spentAddresses);
+        WereAddressesSpentFromResponse response = wereAddressesSpentFrom(spentAddresses);
+        return response.getStates();
+
+    }
+    /**
+     * If the address has a checksum, it is removed
+     *
+     * @param address the address to check
+     * @return list of address boolean checks
+     * @throws ArgumentException
+     */
+    public Boolean checkWereAddressSpentFrom(String address) throws ArgumentException {
+        String[] spentAddresses =new String[] {address};
+        boolean[] response = checkWereAddressSpentFrom(spentAddresses);
+        return response[0];
+    }
+
+    /**
+     * Replays a transfer by doing Proof of Work again.
+     *
+     * @param tailTransactionHash The hash of tail transaction.
+     * @param depth               The depth.
+     * @param minWeightMagnitude  The minimum weight magnitude.
+     * @param reference           Hash of transaction to start random-walk from, used to make sure the tips returned reference a given transaction in their past.
+     * @return Analyzed Transaction objects.
+     * @throws ArgumentException is thrown when the specified input is not valid.
+     */
+    public ReplayBundleResponse replayBundle(String tailTransactionHash, int depth, int minWeightMagnitude, String reference) throws ArgumentException {
+
+        if (!InputValidator.isHash(tailTransactionHash)) {
+            throw new ArgumentException(Constants.INVALID_TAIL_HASH_INPUT_ERROR);
+        }
+
+        StopWatch stopWatch = new StopWatch();
+
+        List<String> bundleTrytes = new ArrayList<>();
+
+        GetBundleResponse bundleResponse = getBundle(tailTransactionHash);
+        Bundle bundle = new Bundle(bundleResponse.getTransactions(), bundleResponse.getTransactions().size());
+        for (Transaction trx : bundle.getTransactions()) {
+
+            bundleTrytes.add(trx.toTrytes());
+        }
+
+        Collections.reverse(bundleTrytes);
+        List<Transaction> trxs = sendTrytes(bundleTrytes.toArray(new String[bundleTrytes.size()]), depth, minWeightMagnitude, reference);
+
+        Boolean[] successful = new Boolean[trxs.size()];
+
+        for (int i = 0; i < trxs.size(); i++) {
+
+            final FindTransactionResponse response = findTransactionsByBundles(trxs.get(i).getBundle());
+
+            successful[i] = response.getHashes().length != 0;
+        }
+
+        return ReplayBundleResponse.create(successful, stopWatch.getElapsedTimeMili());
+    }
 
 }
