@@ -13,11 +13,13 @@ public class NewAddressResponse extends AbstractResponse {
         return res;
     }
 
+
     /**
      * Gets the error
      *
      * @return The error.
      */
+
     public String getAddress() {
         return address;
     }
