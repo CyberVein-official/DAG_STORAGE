@@ -31,8 +31,7 @@ public class TrytesConverter {
      * b. Second value: (90 - 9) / 27 is 3. This is our second value.
      * 3. Our two values are now 9 and 3. To get the tryte value now we simply insert it as indices into '9ABCDEFGHIJKLMNOPQRSTUVWXYZ'
      * a. The first tryte value is '9ABCDEFGHIJKLMNOPQRSTUVWXYZ'[9] === "I"
-     * b. The second tryte value is '9ABCDEFGHIJKLMNOPQRSTUVWXYZ'[3] === "C"
-     * Our tryte pair is "IC"
+     * b. The second tryte value is w
      *
      * @param inputString The input String.
      * @return The ASCII char "Z" is represented as "IC" in trytes.

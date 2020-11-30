@@ -868,5 +868,148 @@ public class CvtAPI extends CvtAPICore {
 
         return ReplayBundleResponse.create(successful, stopWatch.getElapsedTimeMili());
     }
+    /**
+     * Wrapper function for getNodeInfo and getInclusionStates
+     * Uses the latest milestone as tip
+     *
+     * @param hashes The hashes.
+     * @return Inclusion state.
+     */
+    public GetInclusionStateResponse getLatestInclusion(String[] hashes) throws ArgumentException {
+        GetNodeInfoResponse getNodeInfoResponse = getNodeInfo();
+
+        String[] latestMilestone = {getNodeInfoResponse.getLatestSolidSubtangleMilestone()};
+
+        return getInclusionStates(hashes, latestMilestone);
+    }
+    /**
+     * Wrapper function that basically does prepareTransfers, as well as attachToTangle and finally, it broadcasts and stores the transactions locally.
+     *
+     * @param seed               Tryte-encoded seed
+     * @param security           The security level of private key / seed.
+     * @param depth              The depth.
+     * @param minWeightMagnitude The minimum weight magnitude.
+     * @param transfers          Array of transfer objects.
+     * @param inputs             List of inputs used for funding the transfer.
+     * @param remainderAddress   If defined, this remainderAddress will be used for sending the remainder value (of the inputs) to.
+     * @param validateInputs     Whether or not to validate the balances of the provided inputs.
+     * @param validateInputAddresses  Whether or not to validate if the destination address is already used, if a key reuse is detect ot it's send to inputs.
+     * @param tips               The starting points we walk back from to find the balance of the addresses
+     * @return Array of valid Transaction objects.
+     * @throws ArgumentException is thrown when the specified input is not valid.
+     */
+    public SendTransferResponse sendTransfer(String seed, int security, int depth, int minWeightMagnitude, final List<Transfer> transfers, List<Input> inputs, String remainderAddress, boolean validateInputs, boolean validateInputAddresses, final List<Transaction> tips) throws ArgumentException {
+
+        StopWatch stopWatch = new StopWatch();
+
+        List<String> trytes = prepareTransfers(seed, security, transfers, remainderAddress, inputs, tips, validateInputs);
+
+        if (validateInputAddresses) {
+            validateTransfersAddresses(seed, security, trytes);
+        }
+
+        String reference = tips != null && tips.size() > 0 ? tips.get(0).getHash(): null;
+
+        List<Transaction> trxs = sendTrytes(trytes.toArray(new String[trytes.size()]), depth, minWeightMagnitude, reference);
+
+        Boolean[] successful = new Boolean[trxs.size()];
+
+        for (int i = 0; i < trxs.size(); i++) {
+            final FindTransactionResponse response = findTransactionsByAddresses(trxs.get(i).getAddress());
+            successful[i] = response.getHashes().length != 0;
+        }
+
+        return SendTransferResponse.create(trxs, successful, stopWatch.getElapsedTimeMili());
+    }
+
+
+
+    /**
+     * Basically traverse the Bundle by going down the trunkTransactions until
+     * the bundle hash of the transaction is no longer the same. In case the input
+     * transaction hash is not a tail, we return an error.
+     *
+     * @param trunkTx    Hash of a trunk or a tail transaction of a bundle.
+     * @param bundleHash The bundle hash.
+     * @param bundle     bundle to be populated.
+     * @return Transaction objects.
+     * @throws ArgumentException is thrown when an invalid input is provided.
+     */
+    public Bundle traverseBundle(String trunkTx, String bundleHash, Bundle bundle) throws ArgumentException {
+        GetTrytesResponse gtr = getTrytes(trunkTx);
+
+        if (gtr != null) {
+
+            if (gtr.getTrytes().length == 0) {
+                throw new ArgumentException(Constants.INVALID_BUNDLE_ERROR);
+            }
+
+            Transaction trx = new Transaction(gtr.getTrytes()[0], customCurl.clone());
+            if (trx.getBundle() == null) {
+                throw new ArgumentException(Constants.INVALID_TRYTES_INPUT_ERROR);
+            }
+            // If first transaction to search is not a tail, return error
+            if (bundleHash == null && trx.getCurrentIndex() != 0) {
+                throw new ArgumentException(Constants.INVALID_TAIL_HASH_INPUT_ERROR);
+            }
+            // If no bundle hash, define it
+            if (bundleHash == null) {
+                bundleHash = trx.getBundle();
+            }
+            // If different bundle hash, return with bundle
+            if (!bundleHash.equals(trx.getBundle())) {
+                bundle.setLength(bundle.getTransactions().size());
+                return bundle;
+            }
+            // If only one bundle element, return
+            if (trx.getLastIndex() == 0 && trx.getCurrentIndex() == 0) {
+                return new Bundle(Collections.singletonList(trx), 1);
+            }
+            // Define new trunkTransaction for search
+            trunkTx = trx.getTrunkTransaction();
+            // Add transaction object to bundle
+            bundle.getTransactions().add(trx);
+
+            // Continue traversing with new trunkTx
+            return traverseBundle(trunkTx, bundleHash, bundle);
+        } else {
+            throw new ArgumentException(Constants.GET_TRYTES_RESPONSE_ERROR);
+        }
+    }
+    /**
+     * Prepares transfer by generating the bundle with the corresponding cosigner transactions.
+     * Does not contain signatures.
+     *
+     * @param securitySum      The sum of security levels used by all co-signers.
+     * @param inputAddress     Array of input addresses as well as the securitySum.
+     * @param remainderAddress Has to be generated by the cosigners before initiating the transfer, can be null if fully spent.
+     * @param transfers        List of {@link Transfer} we want to make using the unputAddresses
+     * @return Bundle of transaction objects.
+     * @throws ArgumentException is thrown when an invalid argument is provided.
+     * @throws IllegalStateException     is thrown when a transfer fails because their is not enough balance to perform the transfer.
+     */
+    public List<Transaction> initiateTransfer(int securitySum, final String inputAddress, String remainderAddress,
+                                              final List<Transfer> transfers) throws ArgumentException {
+        return initiateTransfer(securitySum, inputAddress, remainderAddress, transfers, null, false);
+    }
+
+    /**
+     * Prepares transfer by generating the bundle with the corresponding cosigner transactions.
+     * Does not contain signatures.
+     *
+     * @param securitySum      The sum of security levels used by all co-signers.
+     * @param inputAddress     Array of input addresses as well as the securitySum.
+     * @param remainderAddress Has to be generated by the cosigners before initiating the transfer, can be null if fully spent.
+     * @param transfers        List of {@link Transfer} we want to make using the unputAddresses
+     * @param tips             The starting points for checking if the balances of the input addresses contain enough to make this transfer
+     * @return Bundle of transaction objects.
+     * @throws ArgumentException is thrown when an invalid argument is provided.
+     * @throws IllegalStateException     is thrown when a transfer fails because their is not enough balance to perform the transfer.
+     */
+    public List<Transaction> initiateTransfer(int securitySum, final String inputAddress, String remainderAddress,
+                                              final List<Transfer> transfers, List<Transaction> tips) throws ArgumentException {
+        return initiateTransfer(securitySum, inputAddress, remainderAddress, transfers, tips, false);
+    }
+
 
 }
