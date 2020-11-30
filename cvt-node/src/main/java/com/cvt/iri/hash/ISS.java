@@ -89,5 +89,90 @@ public class ISS {
         }
         return digests;
     }
+    public static byte[] address(SpongeFactory.Mode mode, final byte[] digests) {
 
+        if (digests.length == 0 || digests.length % Curl.HASH_LENGTH != 0) {
+            throw new RuntimeException("Invalid digests length: " + digests.length);
+        }
+
+        final byte[] address = new byte[Curl.HASH_LENGTH];
+
+        final Sponge hash = SpongeFactory.create(mode);
+        hash.absorb(digests, 0, digests.length);
+        hash.squeeze(address, 0, address.length);
+
+        return address;
+    }
+
+    public static byte[] normalizedBundle(final byte[] bundle) {
+
+        if (bundle.length != Curl.HASH_LENGTH) {
+            throw new RuntimeException("Invalid bundleValidator length: " + bundle.length);
+        }
+
+        final byte[] normalizedBundle = new byte[Curl.HASH_LENGTH / TRYTE_WIDTH];
+
+        ISSInPlace.normalizedBundle(bundle, normalizedBundle);
+        return normalizedBundle;
+    }
+
+    public static byte[] signatureFragment(SpongeFactory.Mode mode, final byte[] normalizedBundleFragment, final byte[] keyFragment) {
+
+        if (normalizedBundleFragment.length != NORMALIZED_FRAGMENT_LENGTH) {
+            throw new RuntimeException("Invalid normalized bundleValidator fragment length: " + normalizedBundleFragment.length);
+        }
+        if (keyFragment.length != FRAGMENT_LENGTH) {
+            throw new RuntimeException("Invalid key fragment length: " + keyFragment.length);
+        }
+
+        final byte[] signatureFragment = Arrays.copyOf(keyFragment, keyFragment.length);
+        final Sponge hash = SpongeFactory.create(mode);
+
+        for (int j = 0; j < NUMBER_OF_FRAGMENT_CHUNKS; j++) {
+
+            for (int k = MAX_TRYTE_VALUE - normalizedBundleFragment[j]; k-- > 0; ) {
+                hash.reset();
+                hash.absorb(signatureFragment, j * Curl.HASH_LENGTH, Curl.HASH_LENGTH);
+                hash.squeeze(signatureFragment, j * Curl.HASH_LENGTH, Curl.HASH_LENGTH);
+            }
+        }
+
+        return signatureFragment;
+    }
+
+    public static byte[] digest(SpongeFactory.Mode mode, final byte[] normalizedBundleFragment, final byte[] signatureFragment) {
+
+        if (normalizedBundleFragment.length != Curl.HASH_LENGTH / TRYTE_WIDTH / NUMBER_OF_SECURITY_LEVELS) {
+            throw new RuntimeException("Invalid normalized bundleValidator fragment length: " + normalizedBundleFragment.length);
+        }
+        if (signatureFragment.length != FRAGMENT_LENGTH) {
+            throw new RuntimeException("Invalid signature fragment length: " + signatureFragment.length);
+        }
+
+        final byte[] digest = new byte[Curl.HASH_LENGTH];
+        ISSInPlace.digest(mode, normalizedBundleFragment, 0, signatureFragment, 0, digest);
+        return digest;
+    }
+
+    public static byte[] getMerkleRoot(SpongeFactory.Mode mode, byte[] hash, byte[] trits, int offset, final int indexIn, int size) {
+        int index = indexIn;
+        final Sponge curl = SpongeFactory.create(mode);
+        for (int i = 0; i < size; i++) {
+            curl.reset();
+            if ((index & 1) == 0) {
+                curl.absorb(hash, 0, hash.length);
+                curl.absorb(trits, offset + i * Curl.HASH_LENGTH, Curl.HASH_LENGTH);
+            } else {
+                curl.absorb(trits, offset + i * Curl.HASH_LENGTH, Curl.HASH_LENGTH);
+                curl.absorb(hash, 0, hash.length);
+            }
+            curl.squeeze(hash, 0, hash.length);
+
+            index >>= 1;
+        }
+        if(index != 0) {
+            return Hash.NULL_HASH.trits();
+        }
+        return hash;
+    }
 }
