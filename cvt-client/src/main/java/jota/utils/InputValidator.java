@@ -34,8 +34,10 @@ public class InputValidator {
      * Determines whether the specified addresses are valid.
      *
      * @param addresses The address list to validate.
+     *                  *
      * @return <code>true</code> if the specified addresses are valid; otherwise, <code>false</code>.
      **/
+
     public static boolean isAddressesCollectionValid(final List<String> addresses) throws ArgumentException {
         for (final String address : addresses) {
             if (!checkAddress(address)) {
