@@ -15,6 +15,7 @@ public class WebConfigurer implements WebMvcConfigurer {
     @Autowired
     private UploadConfig uploadConfig;
 
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/files/**").addResourceLocations("file:///" + uploadConfig.getSharedUploadPath());

@@ -570,6 +570,25 @@ public class API {
         }
         return result;
     }
+    private String getParameterAsStringAndValidate(Map<String, Object> request, String paramName, int size) throws ValidationException {
+        validateParamExists(request, paramName);
+        String result = (String) request.get(paramName);
+        validateTrytes(paramName, size, result);
+        return result;
+    }
+
+    private void validateTrytes(String paramName, int size, String result) throws ValidationException {
+        if (!validTrytes(result, size, ZERO_LENGTH_NOT_ALLOWED)) {
+            throw new ValidationException("Invalid " + paramName + " input");
+        }
+    }
+
+    private void validateParamExists(Map<String, Object> request, String paramName) throws ValidationException {
+        if (!request.containsKey(paramName)) {
+            throw new ValidationException(invalidParams);
+        }
+    }
+
 
 }
 
