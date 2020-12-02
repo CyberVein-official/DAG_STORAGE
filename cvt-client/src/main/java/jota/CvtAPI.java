@@ -1198,5 +1198,132 @@ public class CvtAPI extends CvtAPICore {
         }
 
     }
+    /**
+     * @param seed     Tryte-encoded seed
+     * @param security The security level of private key / seed.
+     * @param trytes   The trytes.
+     * @throws ArgumentException is thrown when the specified input is not valid.
+     */
+    public void validateTransfersAddresses(String seed, int security, List<String> trytes) throws ArgumentException {
+
+        HashSet<String> addresses = new HashSet<>();
+        List<Transaction> inputTransactions = new ArrayList<>();
+        List<String> inputAddresses = new ArrayList<>();
+
+        for (String trx : trytes) {
+            addresses.add(new Transaction(trx, customCurl.clone()).getAddress());
+            inputTransactions.add(new Transaction(trx, customCurl.clone()));
+        }
+
+        String[] hashes = findTransactionsByAddresses(addresses.toArray(new String[addresses.size()])).getHashes();
+        List<Transaction> transactions = findTransactionsObjectsByHashes(hashes);
+        GetNewAddressResponse gna = getNewAddress(seed, security, 0, false, 0, true);
+        GetBalancesAndFormatResponse gbr = getInputs(seed, security, 0, 0, 0);
+
+        for (Input input : gbr.getInputs()) {
+            inputAddresses.add(input.getAddress());
+        }
+
+        //check if send to input
+        for (Transaction trx : inputTransactions) {
+            if (trx.getValue() > 0 && inputAddresses.contains(trx.getAddress()))
+                throw new ArgumentException(Constants.SEND_TO_INPUTS_ERROR);
+        }
+
+        for (Transaction trx : transactions) {
+
+            //check if destination address is already in use
+            if (trx.getValue() < 0 && !inputAddresses.contains(trx.getAddress())) {
+                throw new ArgumentException(Constants.SENDING_TO_USED_ADDRESS_ERROR);
+            }
+
+            //check if key reuse
+            if (trx.getValue() < 0 && gna.getAddresses().contains(trx.getAddress())) {
+                throw new ArgumentException(Constants.PRIVATE_KEY_REUSE_ERROR);
+            }
+
+        }
+    }
+    /**
+     * @param seed               Tryte-encoded seed.
+     * @param security           The security level of private key / seed.
+     * @param inputs             List of inputs used for funding the transfer.
+     * @param bundle             To be populated.
+     * @param tag                The tag.
+     * @param totalValue         The total value.
+     * @param remainderAddress   If defined, this address will be used for sending the remainder value (of the inputs) to.
+     * @param signatureFragments The signature fragments.
+     * @throws ArgumentException is thrown when an invalid argument is provided.
+     * @throws IllegalStateException     is thrown when a transfer fails because their is not enough balance to perform the transfer.
+     */
+    public List<String> addRemainder(final String seed,
+                                     final int security,
+                                     final List<Input> inputs,
+                                     final Bundle bundle,
+                                     final String tag,
+                                     final long totalValue,
+                                     final String remainderAddress,
+                                     final List<String> signatureFragments) throws ArgumentException {
+
+        long totalTransferValue = totalValue;
+        for (int i = 0; i < inputs.size(); i++) {
+            long thisBalance = inputs.get(i).getBalance();
+            long toSubtract = 0 - thisBalance;
+            long timestamp = (long) Math.floor(Calendar.getInstance().getTimeInMillis() / 1000);
+
+            // Add input as bundle entry
+            bundle.addEntry(security, inputs.get(i).getAddress(), toSubtract, tag, timestamp);
+            // If there is a remainder value
+            // Add extra output to send remaining funds to
+
+            if (thisBalance >= totalTransferValue) {
+                long remainder = thisBalance - totalTransferValue;
+
+                // If user has provided remainder address
+                // Use it to send remaining funds to
+                if (remainder > 0 && remainderAddress != null) {
+                    // Remainder bundle entry
+
+                    bundle.addEntry(1, Checksum.removeChecksum(remainderAddress), remainder, tag, timestamp);
+                    // Final function for signing inputs
+                    return CvtAPIUtils.signInputsAndReturn(seed, inputs, bundle, signatureFragments, customCurl.clone());
+                } else if (remainder > 0) {
+                    // Generate a new Address by calling getNewAddress
+
+                    GetNewAddressResponse res = getNewAddress(seed, security, 0, false, 0, false);
+                    // Remainder bundle entry
+                    bundle.addEntry(1, res.getAddresses().get(0), remainder, tag, timestamp);
+
+                    // Final function for signing inputs
+                    return CvtAPIUtils.signInputsAndReturn(seed, inputs, bundle, signatureFragments, customCurl.clone());
+                } else {
+                    // If there is no remainder, do not add transaction to bundle
+                    // simply sign and return
+                    return CvtAPIUtils.signInputsAndReturn(seed, inputs, bundle, signatureFragments, customCurl.clone());
+                }
+
+                // If multiple inputs provided, subtract the totalTransferValue by
+                // the inputs balance
+            } else {
+                totalTransferValue -= thisBalance;
+            }
+        }
+        throw new IllegalStateException(Constants.NOT_ENOUGH_BALANCE_ERROR);
+    }
+
+    /**
+     * Checks if a transaction hash is promotable
+     * @param tail the transaction we want to promote
+     * @return true if it is, otherwise false
+     * @throws ArgumentException when we can't get the consistency of this transaction
+     */
+    public boolean isPromotable(Transaction tail) throws ArgumentException {
+        long lowerBound = tail.getAttachmentTimestamp();
+        CheckConsistencyResponse consistencyResponse = checkConsistency(tail.getHash());
+
+        return consistencyResponse.getState() && isAboveMaxDepth(lowerBound);
+    }
+
+
 
 }
