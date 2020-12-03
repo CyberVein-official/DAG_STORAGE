@@ -1323,7 +1323,29 @@ public class CvtAPI extends CvtAPICore {
 
         return consistencyResponse.getState() && isAboveMaxDepth(lowerBound);
     }
+    /**
+     * Checks if a transaction hash is promotable
+     * @param tail the transaction hash we want to check
+     * @return true if it is, otherwise false
+     * @throws ArgumentException when we can't get the consistency of this transaction
+     * or when the transaction is not found
+     */
+    public boolean isPromotable(String tail) throws ArgumentException {
+        GetTrytesResponse transaction = getTrytes(tail);
+        if (0 == transaction.getTrytes().length) {
+            throw new ArgumentException(Constants.TRANSACTION_NOT_FOUND);
+        }
 
+        return isPromotable(new Transaction(transaction.getTrytes()[0]));
+    }
+
+    private boolean isAboveMaxDepth (long attachmentTimestamp) {
+        // Check against future timestamps
+        return attachmentTimestamp < System.currentTimeMillis() &&
+                // Check if transaction wasn't issued before last 6 milestones
+                // Milestones are being issued every ~2mins
+                System.currentTimeMillis() - attachmentTimestamp < 11 * 60 * 1000;
+    }
 
 
 }
