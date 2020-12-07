@@ -588,6 +588,28 @@ public class API {
             throw new ValidationException(invalidParams);
         }
     }
+    private List<String> getParameterAsList(Map<String, Object> request, String paramName, int size) throws ValidationException {
+        validateParamExists(request, paramName);
+        final List<String> paramList = (List<String>) request.get(paramName);
+        if (paramList.size() > maxRequestList) {
+            throw new ValidationException(overMaxErrorMessage);
+        }
+
+        if (size > 0) {
+            //validate
+            for (final String param : paramList) {
+                validateTrytes(paramName, size, param);
+            }
+        }
+
+        return paramList;
+
+    }
+
+    public boolean invalidSubtangleStatus() {
+        return false;
+//        return (instance.milestone.latestSolidSubtangleMilestoneIndex == milestoneStartIndex);
+    }
 
 
 }
