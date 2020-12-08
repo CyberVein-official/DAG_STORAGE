@@ -40,10 +40,12 @@ public abstract class AbstractResponse {
         return ToStringBuilder.reflectionToString(this, ToStringStyle.MULTI_LINE_STYLE);
     }
 
+
     @Override
     public int hashCode() {
         return HashCodeBuilder.reflectionHashCode(this, false);
     }
+
 
     @Override
     public boolean equals(Object obj) {
