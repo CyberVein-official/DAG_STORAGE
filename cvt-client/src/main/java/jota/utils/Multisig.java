@@ -126,4 +126,90 @@ public class Multisig {
         // Convert trits into trytes and return the address
         return Converter.trytes(addressTrits).equals(multisigAddress);
     }
+
+    /**
+     * Adds the cosigner signatures to the corresponding bundle transaction
+     *
+     * @param bundleToSign
+     * @param inputAddress
+     * @param keyTrytes
+     * @return Returns bundle trytes.
+     **/
+    public Bundle addSignature(Bundle bundleToSign, String inputAddress, String keyTrytes) {
+
+
+        // Get the security used for the private key
+        // 1 security level = 2187 trytes
+        int security = (keyTrytes.length() / Constants.MESSAGE_LENGTH);
+
+        // convert private key trytes into trits
+        int[] key = Converter.trits(keyTrytes);
+
+
+        // First get the total number of already signed transactions
+        // use that for the bundle hash calculation as well as knowing
+        // where to add the signature
+        int numSignedTxs = 0;
+
+
+        for (int i = 0; i < bundleToSign.getTransactions().size(); i++) {
+
+            if (bundleToSign.getTransactions().get(i).getAddress().equals(inputAddress)) {
+
+                // If transaction is already signed, increase counter
+                if (!InputValidator.isNinesTrytes(bundleToSign.getTransactions().get(i).getSignatureFragments(),
+                        bundleToSign.getTransactions().get(i).getSignatureFragments().length())) {
+
+                    numSignedTxs++;
+                }
+                // Else sign the transactions
+                else {
+
+                    String bundleHash = bundleToSign.getTransactions().get(i).getBundle();
+
+                    //  First 6561 trits for the firstFragment
+                    int[] firstFragment = Arrays.copyOfRange(key, 0, 6561);
+
+                    //  Get the normalized bundle hash
+                    int[][] normalizedBundleFragments = new int[3][27];
+                    int[] normalizedBundleHash = bundleToSign.normalizedBundle(bundleHash);
+
+
+                    // Split hash into 3 fragments
+                    for (int k = 0; k < 3; k++) {
+                        normalizedBundleFragments[k] = Arrays.copyOfRange(normalizedBundleHash, (k * 27), (k + 1) * 27);
+                    }
+
+
+                    //  First bundle fragment uses 27 trytes
+                    int[] firstBundleFragment = normalizedBundleFragments[numSignedTxs % 3];
+
+                    //  Calculate the new signatureFragment with the first bundle fragment
+                    int[] firstSignedFragment = signingInstance.signatureFragment(firstBundleFragment, firstFragment);
+
+                    //  Convert signature to trytes and assign the new signatureFragment
+                    bundleToSign.getTransactions().get(i).setSignatureFragments(Converter.trytes(firstSignedFragment));
+
+                    for (int j = 1; j < security; j++) {
+
+                        //  Next 6561 trits for the firstFragment
+                        int[] nextFragment = Arrays.copyOfRange(key, 6561 * j, (j + 1) * 6561);
+
+                        //  Use the next 27 trytes
+                        int[] nextBundleFragment = normalizedBundleFragments[(numSignedTxs + j) % 3];
+
+                        //  Calculate the new signatureFragment with the first bundle fragment
+                        int[] nextSignedFragment = signingInstance.signatureFragment(nextBundleFragment, nextFragment);
+
+                        //  Convert signature to trytes and add new bundle entry at i + j position
+                        // Assign the signature fragment
+                        bundleToSign.getTransactions().get(i + j).setSignatureFragments(Converter.trytes(nextSignedFragment));
+                    }
+                    break;
+                }
+            }
+        }
+
+        return bundleToSign;
+    }
 }
