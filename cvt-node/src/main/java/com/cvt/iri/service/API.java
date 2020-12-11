@@ -27,6 +27,8 @@ import org.xnio.streams.ChannelInputStream;
 
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
@@ -610,7 +612,33 @@ public class API {
         return false;
 //        return (instance.milestone.latestSolidSubtangleMilestoneIndex == milestoneStartIndex);
     }
-
+    /**
+     * Temporarily removes a list of neighbors from your node.
+     * The added neighbors will be added again after relaunching IRI.
+     * Remove the neighbors from your config file or make sure you don't supply them in the -n command line option if you want to keep them removed after restart.
+     * <p>
+     * The URI (Unique Resource Identification) for removing neighbors is:
+     * <b>udp://IPADDRESS:PORT</b>
+     * <p>
+     * Returns an {@link com.cvt.iri.service.dto.ErrorResponse} if the URI scheme is wrong
+     *
+     * @param uris List of URI elements.
+     * @return {@link com.cvt.iri.service.dto.RemoveNeighborsResponse}
+     **/
+    private AbstractResponse removeNeighborsStatement(List<String> uris) {
+        int numberOfRemovedNeighbors = 0;
+        try {
+            for (final String uriString : uris) {
+                log.info("Removing neighbor: " + uriString);
+                if (instance.node.removeNeighbor(new URI(uriString), true)) {
+                    numberOfRemovedNeighbors++;
+                }
+            }
+        } catch (URISyntaxException | RuntimeException e) {
+            return ErrorResponse.create("Invalid uri scheme: " + e.getLocalizedMessage());
+        }
+        return RemoveNeighborsResponse.create(numberOfRemovedNeighbors);
+    }
 
 
 }
