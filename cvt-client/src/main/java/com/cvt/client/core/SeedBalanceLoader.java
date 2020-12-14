@@ -69,4 +69,23 @@ public class SeedBalanceLoader {
             }
         }
     }
+
+    public void dump() {
+        final StringBuilder sb = new StringBuilder();
+        seedBalanceMap.forEach((key, value) -> {
+            sb.append("\n").append(SEED_PREFIX).append(key).append("\n");
+            value.getAddressBalanceList().forEach(item -> {
+                sb.append(item.getAddress()).append(": ").append(item.getBalance()).append("\n");
+            });
+        });
+        log.info(sb.toString());
+    }
+
+    protected String rndSeed(String... exceptSeeds) {
+        Set<String> seedSet = getSeeds();
+        if (null != exceptSeeds) {
+            seedSet.removeAll(Sets.newHashSet(exceptSeeds));
+        }
+        return Lists.newArrayList(seedSet).get(new Random().nextInt(seedSet.size()));
+    }
 }
