@@ -162,5 +162,26 @@ public class CvtAPICore {
         final Call<AddNeighborsResponse> res = service.addNeighbors(CvtNeighborsRequest.createAddNeighborsRequest(uris));
         return wrapCheckedException(res).body();
     }
+    /**
+     * Removes a list of neighbors from the node.
+     *
+     * @param uris The list of URI elements.
+     * @throws ArgumentException
+     */
+    public RemoveNeighborsResponse removeNeighbors(String... uris) throws ArgumentException {
+        final Call<RemoveNeighborsResponse> res = service.removeNeighbors(CvtNeighborsRequest.createRemoveNeighborsRequest(uris));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Get the list of latest tips (unconfirmed transactions).
+     *
+     * @return The the list of tips.
+     * @throws ArgumentException
+     */
+    public GetTipsResponse getTips() throws ArgumentException {
+        final Call<GetTipsResponse> res = service.getTips(CvtCommandRequest.createGetTipsRequest());
+        return wrapCheckedException(res).body();
+    }
 
 }
