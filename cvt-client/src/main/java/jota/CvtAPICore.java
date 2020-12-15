@@ -141,5 +141,26 @@ public class CvtAPICore {
         final Call<GetNodeInfoResponse> res = service.getNodeInfo(CvtCommandRequest.createNodeInfoRequest());
         return wrapCheckedException(res).body();
     }
+    /**
+     * Get the list of neighbors from the node.
+     *
+     * @return The set of neighbors the node is connected with.
+     * @throws ArgumentException
+     */
+    public GetNeighborsResponse getNeighbors() throws ArgumentException {
+        final Call<GetNeighborsResponse> res = service.getNeighbors(CvtCommandRequest.createGetNeighborsRequest());
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Add a list of neighbors to the node.
+     *
+     * @param uris The list of URI elements.
+     * @throws ArgumentException
+     */
+    public AddNeighborsResponse addNeighbors(String... uris) throws ArgumentException {
+        final Call<AddNeighborsResponse> res = service.addNeighbors(CvtNeighborsRequest.createAddNeighborsRequest(uris));
+        return wrapCheckedException(res).body();
+    }
 
 }
