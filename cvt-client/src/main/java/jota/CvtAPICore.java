@@ -184,4 +184,41 @@ public class CvtAPICore {
         return wrapCheckedException(res).body();
     }
 
+    /**
+     * Find the transactions which match the specified input
+     *
+     * @return The transaction hashes which are returned depend on the input.
+     * @throws ArgumentException
+     */
+    public FindTransactionResponse findTransactions(String[] addresses, String[] tags, String[] approvees, String[] bundles) throws ArgumentException {
+
+        final CvtFindTransactionsRequest findTransRequest = CvtFindTransactionsRequest
+                .createFindTransactionRequest()
+                .byAddresses(addresses)
+                .byTags(tags)
+                .byApprovees(approvees)
+                .byBundles(bundles);
+
+        final Call<FindTransactionResponse> res = service.findTransactions(findTransRequest);
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Find the transactions by addresses
+     *
+     * @param addresses A List of addresses.
+     * @return The transaction hashes which are returned depend on the input.
+     */
+    public FindTransactionResponse findTransactionsByAddresses(final String... addresses) throws ArgumentException {
+        List<String> addressesWithoutChecksum = new ArrayList<>();
+
+        for (String address : addresses) {
+            String addressO = Checksum.removeChecksum(address);
+            addressesWithoutChecksum.add(addressO);
+        }
+
+        return findTransactions(addressesWithoutChecksum.toArray(new String[addressesWithoutChecksum.size()]), null, null, null);
+    }
+
+
 }
