@@ -220,5 +220,35 @@ public class CvtAPICore {
         return findTransactions(addressesWithoutChecksum.toArray(new String[addressesWithoutChecksum.size()]), null, null, null);
     }
 
+    /**
+     * Find the transactions by bundles
+     *
+     * @param bundles A List of bundles.
+     * @return The transaction hashes which are returned depend on the input.
+     * @throws ArgumentException
+     */
+    public FindTransactionResponse findTransactionsByBundles(final String... bundles) throws ArgumentException {
+        return findTransactions(null, null, null, bundles);
+    }
+    /**
+     * Find the transactions by approvees
+     *
+     * @param approvees A List of approvess.
+     * @return The transaction hashes which are returned depend on the input.
+     * @throws ArgumentException
+     */
+    public FindTransactionResponse findTransactionsByApprovees(final String... approvees) throws ArgumentException {
+        return findTransactions(null, null, approvees, null);
+    }
+    /**
+     * Find the transactions by digests
+     *
+     * @param digests A List of digests.
+     * @return The transaction hashes which are returned depend on the input.
+     * @throws ArgumentException
+     */
+    public FindTransactionResponse findTransactionsByDigests(final String... digests) throws ArgumentException {
+        return findTransactions(null, digests, null, null);
+    }
 
 }
