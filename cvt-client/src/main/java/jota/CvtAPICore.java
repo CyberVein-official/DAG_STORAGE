@@ -312,5 +312,79 @@ public class CvtAPICore {
     public GetTransactionsToApproveResponse getTransactionsToApprove(Integer depth) throws ArgumentException {
         return getTransactionsToApprove(depth, null);
     }
+    /**
+     * Similar to getInclusionStates.
+     *
+     * @param threshold The confirmation threshold, should be set to 100.
+     * @param addresses The array list of addresses you want to get the confirmed balance from.
+     * @param tips The starting points we walk back from to find the balance of the addresses
+     * @return The confirmed balance which a list of addresses have at the latest confirmed milestone.
+     * @throws ArgumentException
+     */
+    private GetBalancesResponse getBalances(Integer threshold, String[] addresses, String[] tips) throws ArgumentException {
+        final Call<GetBalancesResponse> res = service.getBalances(CvtGetBalancesRequest.createCvtGetBalancesRequest(threshold, addresses, tips));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Similar to getInclusionStates.
+     *
+     * @param threshold The confirmation threshold, should be set to 100.
+     * @param addresses The list of addresses you want to get the confirmed balance from.
+     * @param tips The starting points we walk back from to find the balance of the addresses
+     * @return The confirmed balance which a list of addresses have at the latest confirmed milestone.
+     */
+    public GetBalancesResponse getBalances(Integer threshold, List<String> addresses, List<String> tips) throws ArgumentException {
+
+        List<String> addressesWithoutChecksum = new ArrayList<>();
+
+        for (String address : addresses) {
+            String addressO = Checksum.removeChecksum(address);
+            addressesWithoutChecksum.add(addressO);
+        }
+        String[] tipsArray = tips != null ? tips.toArray(new String[]{}) : null;
+        return getBalances(threshold, addressesWithoutChecksum.toArray(new String[]{}), tipsArray);
+    }
+
+    /**
+     * Similar to getInclusionStates.
+     *
+     * @param threshold The confirmation threshold, should be set to 100.
+     * @param addresses The list of addresses you want to get the confirmed balance from.
+     * @return The confirmed balance which a list of addresses have at the latest confirmed milestone.
+     */
+    public GetBalancesResponse getBalances(Integer threshold, List<String> addresses) throws ArgumentException {
+        return getBalances(threshold, addresses, null);
+    }
+
+    /**
+     * Check if a list of addresses was ever spent from, in the current epoch, or in previous epochs.
+     *
+     * @param addresses List of addresses to check if they were ever spent from.
+     * @return The state of each address (true/false)
+     */
+    public WereAddressesSpentFromResponse wereAddressesSpentFrom(String... addresses) throws ArgumentException {
+        if (!InputValidator.isAddressesArrayValid(addresses)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        final Call<WereAddressesSpentFromResponse> res = service.wereAddressesSpentFrom(CvtWereAddressesSpentFromRequest.create(addresses));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Checks the consistency of the subtangle formed by the provided tails.
+     *
+     * @param tails The tails describing the subtangle.
+     * @return The The the raw transaction data (trytes) of a specific transaction.
+     */
+    public CheckConsistencyResponse checkConsistency(String... tails) throws ArgumentException {
+        if (!InputValidator.isArrayOfHashes(tails)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        final Call<CheckConsistencyResponse> res = service.checkConsistency(CvtCheckConsistencyRequest.create(tails));
+        return wrapCheckedException(res).body();
+    }
 
 }
