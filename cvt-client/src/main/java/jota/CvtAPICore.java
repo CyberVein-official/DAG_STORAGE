@@ -251,5 +251,66 @@ public class CvtAPICore {
         return findTransactions(null, digests, null, null);
     }
 
-    
+    /**
+     * Get the inclusion states of a set of transactions. This is for determining if a transaction was accepted and confirmed by the network or not.
+     * Search for multiple tips (and thus, milestones) to get past inclusion states of transactions.
+     *
+     * @param transactions The list of transactions you want to get the inclusion state for.
+     * @param tips         List of tips (including milestones) you want to search for the inclusion state.
+     * @return The inclusion states of a set of transactions.
+     */
+    public GetInclusionStateResponse getInclusionStates(String[] transactions, String[] tips) throws ArgumentException {
+
+        if (!InputValidator.isArrayOfHashes(transactions)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        if (!InputValidator.isArrayOfHashes(tips)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+
+        final Call<GetInclusionStateResponse> res = service.getInclusionStates(CvtGetInclusionStateRequest
+                .createGetInclusionStateRequest(transactions, tips));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Returns the raw trytes data of a transaction.
+     *
+     * @param hashes The of transaction hashes of which you want to get trytes from.
+     * @return The the raw transaction data (trytes) of a specific transaction.
+     */
+    public GetTrytesResponse getTrytes(String... hashes) throws ArgumentException {
+
+        if (!InputValidator.isArrayOfHashes(hashes)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        final Call<GetTrytesResponse> res = service.getTrytes(CvtGetTrytesRequest.createGetTrytesRequest(hashes));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Tip selection which returns trunkTransaction and branchTransaction.
+     *
+     * @param depth The number of bundles to go back to determine the transactions for approval.
+     * @param reference Hash of transaction to start random-walk from, used to make sure the tips returned reference a given transaction in their past.
+     * @return The Tip selection which returns trunkTransaction and branchTransaction
+     * @throws ArgumentException
+     */
+    public GetTransactionsToApproveResponse getTransactionsToApprove(Integer depth, String reference) throws ArgumentException {
+
+        final Call<GetTransactionsToApproveResponse> res = service.getTransactionsToApprove(CvtGetTransactionsToApproveRequest.createCvtGetTransactionsToApproveRequest(depth, reference));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * {@link #getTransactionsToApprove(Integer, String)}
+     * @throws ArgumentException
+     */
+    public GetTransactionsToApproveResponse getTransactionsToApprove(Integer depth) throws ArgumentException {
+        return getTransactionsToApprove(depth, null);
+    }
+
 }
