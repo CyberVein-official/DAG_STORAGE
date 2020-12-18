@@ -387,4 +387,58 @@ public class CvtAPICore {
         return wrapCheckedException(res).body();
     }
 
+    /**
+     * Attaches the specified transactions (trytes) to the Tangle by doing Proof of Work.
+     *
+     * @param trunkTransaction The trunk transaction to approve.
+     * @param branchTransaction The branch transaction to approve.
+     * @param minWeightMagnitude The Proof of Work intensity.
+     * @param trytes A List of trytes (raw transaction data) to attach to the tangle.
+     */
+    public GetAttachToTangleResponse attachToTangle(String trunkTransaction, String branchTransaction, Integer minWeightMagnitude, String... trytes) throws ArgumentException {
+
+        if (!InputValidator.isHash(trunkTransaction)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        if (!InputValidator.isHash(branchTransaction)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        if (!InputValidator.isArrayOfTrytes(trytes)) {
+            throw new ArgumentException(INVALID_TRYTES_INPUT_ERROR);
+        }
+
+        if (localPoW != null) {
+            System.out.println("Doing local PoW!");
+            final String[] resultTrytes = new String[trytes.length];
+            String previousTransaction = null;
+            for (int i = 0; i < trytes.length; i++) {
+                Transaction txn = new Transaction(trytes[i]);
+                txn.setTrunkTransaction(previousTransaction == null ? trunkTransaction : previousTransaction);
+                txn.setBranchTransaction(previousTransaction == null ? branchTransaction : trunkTransaction);
+                if (txn.getTag().isEmpty() || txn.getTag().matches("9*"))
+                    txn.setTag(txn.getObsoleteTag());
+                txn.setAttachmentTimestamp(System.currentTimeMillis());
+                txn.setAttachmentTimestampLowerBound(0);
+                txn.setAttachmentTimestampUpperBound(3_812_798_742_493L);
+                resultTrytes[i] = localPoW.performPoW(txn.toTrytes(), minWeightMagnitude);
+                previousTransaction = new Transaction(resultTrytes[i]).getHash();
+            }
+            return new GetAttachToTangleResponse(resultTrytes);
+        }
+
+        final Call<GetAttachToTangleResponse> res = service.attachToTangle(CvtAttachToTangleRequest.createAttachToTangleRequest(trunkTransaction, branchTransaction, minWeightMagnitude, trytes));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Interrupts and completely aborts the attachToTangle process.
+     * @throws ArgumentException
+     */
+    public InterruptAttachingToTangleResponse interruptAttachingToTangle() throws ArgumentException {
+        final Call<InterruptAttachingToTangleResponse> res = service.interruptAttachingToTangle(CvtCommandRequest.createInterruptAttachToTangleRequest());
+        return wrapCheckedException(res).body();
+    }
+
 }
