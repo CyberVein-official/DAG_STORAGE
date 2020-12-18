@@ -205,4 +205,20 @@ public class PearlDiver {
             }
         }
     }
+    private static void increment(final long[] midStateCopyLow, final long[] midStateCopyHigh,
+                                  final int fromIndex, final int toIndex) {
+
+        for (int i = fromIndex; i < toIndex; i++) {
+            if (midStateCopyLow[i] == LOW_BITS) {
+                midStateCopyLow[i] = HIGH_BITS;
+                midStateCopyHigh[i] = LOW_BITS;
+            } else if (midStateCopyHigh[i] == LOW_BITS) {
+                midStateCopyHigh[i] = HIGH_BITS;
+                break;
+            } else {
+                midStateCopyLow[i] = LOW_BITS;
+                break;
+            }
+        }
+    }
 }
