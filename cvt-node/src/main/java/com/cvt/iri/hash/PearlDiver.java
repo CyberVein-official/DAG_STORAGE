@@ -182,4 +182,27 @@ public class PearlDiver {
         midStateLow[162 + 3] = 0b1111111111000000000000000000000000000111111111111111111111111111L;
         midStateHigh[162 + 3] = 0b0000000000111111111111111111111111111111111111111111111111111111L;
     }
+    private static void transform(final long[] stateLow, final long[] stateHigh,
+                                  final long[] scratchpadLow, final long[] scratchpadHigh) {
+
+        for (int round = 0; round < Curl.NUMBER_OF_ROUNDSP81; round++) {
+            copy(stateLow, stateHigh, scratchpadLow, scratchpadHigh);
+
+            int scratchpadIndex = 0;
+            for (int stateIndex = 0; stateIndex < CURL_STATE_LENGTH; stateIndex++) {
+                final long alpha = scratchpadLow[scratchpadIndex];
+                final long beta = scratchpadHigh[scratchpadIndex];
+                if (scratchpadIndex < 365) {
+                    scratchpadIndex += 364;
+                } else {
+                    scratchpadIndex += -365;
+                }
+                final long gamma = scratchpadHigh[scratchpadIndex];
+                final long delta = (alpha | (~gamma)) & (scratchpadLow[scratchpadIndex] ^ beta);
+
+                stateLow[stateIndex] = ~delta;
+                stateHigh[stateIndex] = (alpha ^ gamma) | delta;
+            }
+        }
+    }
 }

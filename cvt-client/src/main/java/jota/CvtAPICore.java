@@ -251,5 +251,327 @@ public class CvtAPICore {
         return findTransactions(null, digests, null, null);
     }
 
-    
+    /**
+     * Get the inclusion states of a set of transactions. This is for determining if a transaction was accepted and confirmed by the network or not.
+     * Search for multiple tips (and thus, milestones) to get past inclusion states of transactions.
+     *
+     * @param transactions The list of transactions you want to get the inclusion state for.
+     * @param tips         List of tips (including milestones) you want to search for the inclusion state.
+     * @return The inclusion states of a set of transactions.
+     */
+    public GetInclusionStateResponse getInclusionStates(String[] transactions, String[] tips) throws ArgumentException {
+
+        if (!InputValidator.isArrayOfHashes(transactions)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        if (!InputValidator.isArrayOfHashes(tips)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+
+        final Call<GetInclusionStateResponse> res = service.getInclusionStates(CvtGetInclusionStateRequest
+                .createGetInclusionStateRequest(transactions, tips));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Returns the raw trytes data of a transaction.
+     *
+     * @param hashes The of transaction hashes of which you want to get trytes from.
+     * @return The the raw transaction data (trytes) of a specific transaction.
+     */
+    public GetTrytesResponse getTrytes(String... hashes) throws ArgumentException {
+
+        if (!InputValidator.isArrayOfHashes(hashes)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        final Call<GetTrytesResponse> res = service.getTrytes(CvtGetTrytesRequest.createGetTrytesRequest(hashes));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Tip selection which returns trunkTransaction and branchTransaction.
+     *
+     * @param depth The number of bundles to go back to determine the transactions for approval.
+     * @param reference Hash of transaction to start random-walk from, used to make sure the tips returned reference a given transaction in their past.
+     * @return The Tip selection which returns trunkTransaction and branchTransaction
+     * @throws ArgumentException
+     */
+    public GetTransactionsToApproveResponse getTransactionsToApprove(Integer depth, String reference) throws ArgumentException {
+
+        final Call<GetTransactionsToApproveResponse> res = service.getTransactionsToApprove(CvtGetTransactionsToApproveRequest.createCvtGetTransactionsToApproveRequest(depth, reference));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * {@link #getTransactionsToApprove(Integer, String)}
+     * @throws ArgumentException
+     */
+    public GetTransactionsToApproveResponse getTransactionsToApprove(Integer depth) throws ArgumentException {
+        return getTransactionsToApprove(depth, null);
+    }
+    /**
+     * Similar to getInclusionStates.
+     *
+     * @param threshold The confirmation threshold, should be set to 100.
+     * @param addresses The array list of addresses you want to get the confirmed balance from.
+     * @param tips The starting points we walk back from to find the balance of the addresses
+     * @return The confirmed balance which a list of addresses have at the latest confirmed milestone.
+     * @throws ArgumentException
+     */
+    private GetBalancesResponse getBalances(Integer threshold, String[] addresses, String[] tips) throws ArgumentException {
+        final Call<GetBalancesResponse> res = service.getBalances(CvtGetBalancesRequest.createCvtGetBalancesRequest(threshold, addresses, tips));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Similar to getInclusionStates.
+     *
+     * @param threshold The confirmation threshold, should be set to 100.
+     * @param addresses The list of addresses you want to get the confirmed balance from.
+     * @param tips The starting points we walk back from to find the balance of the addresses
+     * @return The confirmed balance which a list of addresses have at the latest confirmed milestone.
+     */
+    public GetBalancesResponse getBalances(Integer threshold, List<String> addresses, List<String> tips) throws ArgumentException {
+
+        List<String> addressesWithoutChecksum = new ArrayList<>();
+
+        for (String address : addresses) {
+            String addressO = Checksum.removeChecksum(address);
+            addressesWithoutChecksum.add(addressO);
+        }
+        String[] tipsArray = tips != null ? tips.toArray(new String[]{}) : null;
+        return getBalances(threshold, addressesWithoutChecksum.toArray(new String[]{}), tipsArray);
+    }
+
+    /**
+     * Similar to getInclusionStates.
+     *
+     * @param threshold The confirmation threshold, should be set to 100.
+     * @param addresses The list of addresses you want to get the confirmed balance from.
+     * @return The confirmed balance which a list of addresses have at the latest confirmed milestone.
+     */
+    public GetBalancesResponse getBalances(Integer threshold, List<String> addresses) throws ArgumentException {
+        return getBalances(threshold, addresses, null);
+    }
+
+    /**
+     * Check if a list of addresses was ever spent from, in the current epoch, or in previous epochs.
+     *
+     * @param addresses List of addresses to check if they were ever spent from.
+     * @return The state of each address (true/false)
+     */
+    public WereAddressesSpentFromResponse wereAddressesSpentFrom(String... addresses) throws ArgumentException {
+        if (!InputValidator.isAddressesArrayValid(addresses)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        final Call<WereAddressesSpentFromResponse> res = service.wereAddressesSpentFrom(CvtWereAddressesSpentFromRequest.create(addresses));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Checks the consistency of the subtangle formed by the provided tails.
+     *
+     * @param tails The tails describing the subtangle.
+     * @return The The the raw transaction data (trytes) of a specific transaction.
+     */
+    public CheckConsistencyResponse checkConsistency(String... tails) throws ArgumentException {
+        if (!InputValidator.isArrayOfHashes(tails)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        final Call<CheckConsistencyResponse> res = service.checkConsistency(CvtCheckConsistencyRequest.create(tails));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Attaches the specified transactions (trytes) to the Tangle by doing Proof of Work.
+     *
+     * @param trunkTransaction The trunk transaction to approve.
+     * @param branchTransaction The branch transaction to approve.
+     * @param minWeightMagnitude The Proof of Work intensity.
+     * @param trytes A List of trytes (raw transaction data) to attach to the tangle.
+     */
+    public GetAttachToTangleResponse attachToTangle(String trunkTransaction, String branchTransaction, Integer minWeightMagnitude, String... trytes) throws ArgumentException {
+
+        if (!InputValidator.isHash(trunkTransaction)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        if (!InputValidator.isHash(branchTransaction)) {
+            throw new ArgumentException(INVALID_HASHES_INPUT_ERROR);
+        }
+
+        if (!InputValidator.isArrayOfTrytes(trytes)) {
+            throw new ArgumentException(INVALID_TRYTES_INPUT_ERROR);
+        }
+
+        if (localPoW != null) {
+            System.out.println("Doing local PoW!");
+            final String[] resultTrytes = new String[trytes.length];
+            String previousTransaction = null;
+            for (int i = 0; i < trytes.length; i++) {
+                Transaction txn = new Transaction(trytes[i]);
+                txn.setTrunkTransaction(previousTransaction == null ? trunkTransaction : previousTransaction);
+                txn.setBranchTransaction(previousTransaction == null ? branchTransaction : trunkTransaction);
+                if (txn.getTag().isEmpty() || txn.getTag().matches("9*"))
+                    txn.setTag(txn.getObsoleteTag());
+                txn.setAttachmentTimestamp(System.currentTimeMillis());
+                txn.setAttachmentTimestampLowerBound(0);
+                txn.setAttachmentTimestampUpperBound(3_812_798_742_493L);
+                resultTrytes[i] = localPoW.performPoW(txn.toTrytes(), minWeightMagnitude);
+                previousTransaction = new Transaction(resultTrytes[i]).getHash();
+            }
+            return new GetAttachToTangleResponse(resultTrytes);
+        }
+
+        final Call<GetAttachToTangleResponse> res = service.attachToTangle(CvtAttachToTangleRequest.createAttachToTangleRequest(trunkTransaction, branchTransaction, minWeightMagnitude, trytes));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Interrupts and completely aborts the attachToTangle process.
+     * @throws ArgumentException
+     */
+    public InterruptAttachingToTangleResponse interruptAttachingToTangle() throws ArgumentException {
+        final Call<InterruptAttachingToTangleResponse> res = service.interruptAttachingToTangle(CvtCommandRequest.createInterruptAttachToTangleRequest());
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Broadcast a list of transactions to all neighbors. The input trytes for this call are provided by attachToTangle.
+     *
+     * @param trytes The list of raw data of transactions to be rebroadcast.
+     */
+    public BroadcastTransactionsResponse broadcastTransactions(String... trytes) throws ArgumentException {
+
+        if (!InputValidator.isArrayOfAttachedTrytes(trytes)) {
+            throw new ArgumentException(INVALID_ATTACHED_TRYTES_INPUT_ERROR);
+        }
+
+        final Call<BroadcastTransactionsResponse> res = service.broadcastTransactions(CvtBroadcastTransactionRequest.createBroadcastTransactionsRequest(trytes));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Store transactions into the local storage. The trytes to be used for this call are returned by attachToTangle.
+     *
+     * @param trytes The list of raw data of transactions to be rebroadcast.
+     * @throws ArgumentException
+     */
+    public StoreTransactionsResponse storeTransactions(String... trytes) throws ArgumentException {
+        final Call<StoreTransactionsResponse> res = service.storeTransactions(CvtStoreTransactionsRequest.createStoreTransactionsRequest(trytes));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Gets the protocol.
+     *
+     * @return The protocol to use when connecting to the remote node.
+     */
+    public String getProtocol() {
+        return protocol;
+    }
+
+    /**
+     * Gets the host.
+     *
+     * @return The host you want to connect to.
+     */
+    public String getHost() {
+        return host;
+    }
+
+    /**
+     * Gets the port.
+     *
+     * @return The port of the host you want to connect to.
+     */
+    public String getPort() {
+        return port;
+    }
+
+    public static class Builder<T extends Builder<T>> {
+        String protocol, host, port;
+        CvtLocalPoW localPoW;
+        private FileReader fileReader = null;
+        private BufferedReader bufferedReader = null;
+        private Properties nodeConfig = null;
+
+        public CvtAPICore build() {
+            // resolution order: builder value, configuration file, default value
+
+            if (null == protocol) {
+                protocol = getFromConfigurationOrEnvironment("cvt.node.protocol", "CVT_NODE_PROTOCOL", "http");
+            }
+
+            if (null == host) {
+                host = getFromConfigurationOrEnvironment("cvt.node.host", "CVT_NODE_HOST", "localhost");
+            }
+
+            if (null == port) {
+                port = getFromConfigurationOrEnvironment("cvt.node.port", "CVT_NODE_PORT", "14265");
+            }
+
+            return new CvtAPICore(this);
+        }
+
+        private String getFromConfigurationOrEnvironment(String propertyKey, String envName, String defaultValue) {
+            if (getNodeConfig().getProperty(propertyKey) != null) {
+                return nodeConfig.getProperty(propertyKey);
+            } else {
+                return env(envName, defaultValue);
+            }
+        }
+
+        private Properties getNodeConfig() {
+            if (null != nodeConfig) {
+                return nodeConfig;
+            }
+
+            nodeConfig = new Properties();
+            if (null == fileReader) {
+                try {
+                    fileReader = new FileReader("../node_config.properties");
+
+                    if (null == bufferedReader) {
+                        bufferedReader = new BufferedReader(fileReader);
+                    }
+                    nodeConfig.load(bufferedReader);
+                } catch (IOException e) {
+                    log.debug("node_config.properties not found. Rolling back for another solution...");
+                }
+            }
+
+            return nodeConfig;
+        }
+
+        public T config(Properties properties) {
+            nodeConfig = properties;
+            return (T) this;
+        }
+
+        public T host(String host) {
+            this.host = host;
+            return (T) this;
+        }
+
+        public T port(String port) {
+            this.port = port;
+            return (T) this;
+        }
+
+        public T protocol(String protocol) {
+            this.protocol = protocol;
+            return (T) this;
+        }
+
+        public T localPoW(CvtLocalPoW localPoW) {
+            this.localPoW = localPoW;
+            return (T) this;
+        }
+    }
 }
