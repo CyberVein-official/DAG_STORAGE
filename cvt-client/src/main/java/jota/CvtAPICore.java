@@ -441,4 +441,49 @@ public class CvtAPICore {
         return wrapCheckedException(res).body();
     }
 
+    /**
+     * Broadcast a list of transactions to all neighbors. The input trytes for this call are provided by attachToTangle.
+     *
+     * @param trytes The list of raw data of transactions to be rebroadcast.
+     */
+    public BroadcastTransactionsResponse broadcastTransactions(String... trytes) throws ArgumentException {
+
+        if (!InputValidator.isArrayOfAttachedTrytes(trytes)) {
+            throw new ArgumentException(INVALID_ATTACHED_TRYTES_INPUT_ERROR);
+        }
+
+        final Call<BroadcastTransactionsResponse> res = service.broadcastTransactions(CvtBroadcastTransactionRequest.createBroadcastTransactionsRequest(trytes));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Store transactions into the local storage. The trytes to be used for this call are returned by attachToTangle.
+     *
+     * @param trytes The list of raw data of transactions to be rebroadcast.
+     * @throws ArgumentException
+     */
+    public StoreTransactionsResponse storeTransactions(String... trytes) throws ArgumentException {
+        final Call<StoreTransactionsResponse> res = service.storeTransactions(CvtStoreTransactionsRequest.createStoreTransactionsRequest(trytes));
+        return wrapCheckedException(res).body();
+    }
+
+    /**
+     * Gets the protocol.
+     *
+     * @return The protocol to use when connecting to the remote node.
+     */
+    public String getProtocol() {
+        return protocol;
+    }
+
+    /**
+     * Gets the host.
+     *
+     * @return The host you want to connect to.
+     */
+    public String getHost() {
+        return host;
+    }
+
+
 }
