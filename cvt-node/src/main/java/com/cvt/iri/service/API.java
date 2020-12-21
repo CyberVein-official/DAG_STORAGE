@@ -12,6 +12,8 @@ import com.cvt.iri.retrofit2.FileHashResponse;
 import com.cvt.iri.retrofit2.VerifyStorageResponse;
 import com.cvt.iri.service.dto.*;
 import com.cvt.iri.service.tipselection.impl.WalkValidatorImpl;
+import com.cvt.iri.storage.sqllite.SqliteHelper;
+import com.cvt.iri.utils.Converter;
 import com.cvt.iri.utils.IotaIOUtils;
 import com.cvt.iri.utils.UrlUtils;
 import com.google.gson.Gson;
@@ -21,6 +23,14 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.*;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.StatusLine;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.streams.ChannelInputStream;
@@ -639,7 +649,176 @@ public class API {
         }
         return RemoveNeighborsResponse.create(numberOfRemovedNeighbors);
     }
+    /**
+     * Returns the raw transaction data (trytes) of a specific transaction.
+     * These trytes can then be easily converted into the actual transaction object.
+     * See utility functions for more details.
+     *
+     * @param hashes List of transaction hashes you want to get trytes from.
+     * @return {@link com.cvt.iri.service.dto.GetTrytesResponse}
+     **/
+    private synchronized AbstractResponse getTrytesStatement(List<String> hashes) throws Exception {
+        final List<String> elements = new LinkedList<>();
+        for (final String hash : hashes) {
+            final TransactionViewModel transactionViewModel = TransactionViewModel.fromHash(instance.tangle, new Hash(hash));
+            if (transactionViewModel != null) {
+                elements.add(Converter.trytes(transactionViewModel.trits()));
+            }
+        }
+        if (elements.size() > maxGetTrytes) {
+            return ErrorResponse.create(overMaxErrorMessage);
+        }
+        return GetTrytesResponse.create(elements);
+    }
 
+    private static int counter_getTxToApprove = 0;
+
+    public static int getCounter_getTxToApprove() {
+        return counter_getTxToApprove;
+    }
+
+    public static void incCounter_getTxToApprove() {
+        counter_getTxToApprove++;
+    }
+
+    private static long ellapsedTime_getTxToApprove = 0L;
+
+    public static long getEllapsedTime_getTxToApprove() {
+        return ellapsedTime_getTxToApprove;
+    }
+
+    public static void incEllapsedTime_getTxToApprove(long ellapsedTime) {
+        ellapsedTime_getTxToApprove += ellapsedTime;
+    }
+
+    /**
+     * Tip selection which returns <code>trunkTransaction</code> and <code>branchTransaction</code>.
+     * The input value <code>depth</code> determines how many milestones to go back for finding the transactions to approve.
+     * The higher your <code>depth</code> value, the more work you have to do as you are confirming more transactions.
+     * If the <code>depth</code> is too large (usually above 15, it depends on the node's configuration) an error will be returned.
+     * The <code>reference</code> is an optional hash of a transaction you want to approve.
+     * If it can't be found at the specified <code>depth</code> then an error will be returned.
+     *
+     * @param depth     Number of bundles to go back to determine the transactions for approval.
+     * @param reference Hash of transaction to start random-walk from, used to make sure the tips returned reference a given transaction in their past.
+     * @return {@link com.cvt.iri.service.dto.GetTransactionsToApproveResponse}
+     **/
+    public synchronized List<Hash> getTransactionsToApproveStatement(int depth, Optional<Hash> reference) throws Exception {
+
+        if (invalidSubtangleStatus()) {
+            throw new IllegalStateException("This operations cannot be executed: The subtangle has not been updated yet.");
+        }
+
+        List<Hash> tips = instance.tipsSelector.getTransactionsToApprove(depth, reference);
+
+        if (log.isDebugEnabled()) {
+            gatherStatisticsOnTipSelection();
+        }
+
+        return tips;
+    }
+
+    private void gatherStatisticsOnTipSelection() {
+        API.incCounter_getTxToApprove();
+        if ((getCounter_getTxToApprove() % 100) == 0) {
+            String sb = "Last 100 getTxToApprove consumed " + API.getEllapsedTime_getTxToApprove() / 1000000000L + " seconds processing time.";
+            log.debug(sb);
+            counter_getTxToApprove = 0;
+            ellapsedTime_getTxToApprove = 0L;
+        }
+    }
+
+
+    /**
+     * Returns the list of tips.
+     *
+     * @return {@link com.cvt.iri.service.dto.GetTipsResponse}
+     **/
+    private synchronized AbstractResponse getTipsStatement() throws Exception {
+        return GetTipsResponse.create(instance.tipsViewModel.getTips().stream().map(Hash::toString).collect(Collectors.toList()));
+    }
+
+    /**
+     * Store transactions into the local storage.
+     * The trytes to be used for this call are returned by <code>attachToTangle</code>.
+     *
+     * @param trytes List of raw data of transactions to be rebroadcast.
+     **/
+    public void storeTransactionsStatement(final List<String> trytes) throws Exception {
+        final List<TransactionViewModel> elements = parseTransactionViewModel(trytes);
+        try {
+            for (final TransactionViewModel transactionViewModel : elements) {
+                storeTransactionTOSqlite(transactionViewModel);
+
+                //store transactions
+                if (transactionViewModel.store(instance.tangle)) {
+                    transactionViewModel.setArrivalTime(System.currentTimeMillis() / 1000L);
+                    instance.transactionValidator.updateStatus(transactionViewModel);
+                    transactionViewModel.updateSender("local");
+                    transactionViewModel.update(instance.tangle, "sender");
+                }
+            }
+        } catch (Exception e) {
+            log.info("原始交易异常，可以忽略", e);
+        }
+
+        NodeUtils.requestSuperNodeToVerifyTransaction(instance.node.getSuperNode(), elements);
+        for (final TransactionViewModel transactionViewModel : elements) {
+            storeTransactionTOSqlite(transactionViewModel);
+        }
+        SqliteHelper.printTransaction();
+    }
+    private void storeTransactionTOSqlite(TransactionViewModel transactionViewModel) throws Exception {
+
+        // heffjo: persistence
+        Transaction transaction = transactionViewModel.getTransaction();
+        if (null == transaction.address) {
+            log.info("交易地址为空");
+            return;
+        }
+
+        SqliteHelper.saveTransaction(transactionViewModel);
+    }
+    /**
+     * 请求邻居对存储进行证明
+     *
+     * @param neighbor 邻居对象
+     * @param params   请求参数
+     */
+    private void postToNeighbor(Neighbor neighbor, Map<String, Object> params) {
+        String requestBody = new Gson().toJson(params);
+        HttpClient httpClient = HttpClientBuilder.create().build();
+        // 潜规则，WEB端口比 UDP 端口小 10
+        HttpPost httpPost = new HttpPost("http://" + neighbor.getHostAddress() + ":" + (neighbor.getPort() - 10));
+        httpPost.addHeader("X-CVT-API-Version", "20181207");
+        ByteArrayEntity entity = new ByteArrayEntity(requestBody.getBytes(StandardCharsets.UTF_8));
+        entity.setContentType("application/json");
+        httpPost.setEntity(entity);
+        //执行post请求
+        try {
+            HttpResponse response = httpClient.execute(httpPost);
+            String responseBody = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+            StatusLine statusLine = response.getStatusLine();
+            if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
+                Map data = new Gson().fromJson(responseBody, Map.class);
+                Boolean success = (Boolean) data.getOrDefault("verifySuccess", false);
+                if (!success) {
+                    throw new RuntimeException("文件存储证明失败");
+                }
+            }
+            log.info("状态码：" + response.getStatusLine());
+        } catch (Exception e) {
+            log.error("请求邻居" + neighbor.getAddress() + "执行储存证明异常", e);
+            throw new RuntimeException("请求邻居" + neighbor.getAddress() + "执行储存证明异常", e);
+        }
+    }
+
+    private String removeLast9(String str) {
+        while (str.endsWith("9")) {
+            str = str.substring(0, str.length() - 1);
+        }
+        return str;
+    }
 
 }
 
