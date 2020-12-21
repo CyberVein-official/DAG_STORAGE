@@ -23,6 +23,14 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.*;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.StatusLine;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.streams.ChannelInputStream;
@@ -770,6 +778,46 @@ public class API {
         }
 
         SqliteHelper.saveTransaction(transactionViewModel);
+    }
+    /**
+     * 请求邻居对存储进行证明
+     *
+     * @param neighbor 邻居对象
+     * @param params   请求参数
+     */
+    private void postToNeighbor(Neighbor neighbor, Map<String, Object> params) {
+        String requestBody = new Gson().toJson(params);
+        HttpClient httpClient = HttpClientBuilder.create().build();
+        // 潜规则，WEB端口比 UDP 端口小 10
+        HttpPost httpPost = new HttpPost("http://" + neighbor.getHostAddress() + ":" + (neighbor.getPort() - 10));
+        httpPost.addHeader("X-CVT-API-Version", "20181207");
+        ByteArrayEntity entity = new ByteArrayEntity(requestBody.getBytes(StandardCharsets.UTF_8));
+        entity.setContentType("application/json");
+        httpPost.setEntity(entity);
+        //执行post请求
+        try {
+            HttpResponse response = httpClient.execute(httpPost);
+            String responseBody = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+            StatusLine statusLine = response.getStatusLine();
+            if (statusLine.getStatusCode() == HttpStatus.SC_OK) {
+                Map data = new Gson().fromJson(responseBody, Map.class);
+                Boolean success = (Boolean) data.getOrDefault("verifySuccess", false);
+                if (!success) {
+                    throw new RuntimeException("文件存储证明失败");
+                }
+            }
+            log.info("状态码：" + response.getStatusLine());
+        } catch (Exception e) {
+            log.error("请求邻居" + neighbor.getAddress() + "执行储存证明异常", e);
+            throw new RuntimeException("请求邻居" + neighbor.getAddress() + "执行储存证明异常", e);
+        }
+    }
+
+    private String removeLast9(String str) {
+        while (str.endsWith("9")) {
+            str = str.substring(0, str.length() - 1);
+        }
+        return str;
     }
 
 }
