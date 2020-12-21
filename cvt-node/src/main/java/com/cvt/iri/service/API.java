@@ -12,6 +12,7 @@ import com.cvt.iri.retrofit2.FileHashResponse;
 import com.cvt.iri.retrofit2.VerifyStorageResponse;
 import com.cvt.iri.service.dto.*;
 import com.cvt.iri.service.tipselection.impl.WalkValidatorImpl;
+import com.cvt.iri.storage.sqllite.SqliteHelper;
 import com.cvt.iri.utils.Converter;
 import com.cvt.iri.utils.IotaIOUtils;
 import com.cvt.iri.utils.UrlUtils;
@@ -720,6 +721,56 @@ public class API {
     }
 
 
+    /**
+     * Returns the list of tips.
+     *
+     * @return {@link com.cvt.iri.service.dto.GetTipsResponse}
+     **/
+    private synchronized AbstractResponse getTipsStatement() throws Exception {
+        return GetTipsResponse.create(instance.tipsViewModel.getTips().stream().map(Hash::toString).collect(Collectors.toList()));
+    }
+
+    /**
+     * Store transactions into the local storage.
+     * The trytes to be used for this call are returned by <code>attachToTangle</code>.
+     *
+     * @param trytes List of raw data of transactions to be rebroadcast.
+     **/
+    public void storeTransactionsStatement(final List<String> trytes) throws Exception {
+        final List<TransactionViewModel> elements = parseTransactionViewModel(trytes);
+        try {
+            for (final TransactionViewModel transactionViewModel : elements) {
+                storeTransactionTOSqlite(transactionViewModel);
+
+                //store transactions
+                if (transactionViewModel.store(instance.tangle)) {
+                    transactionViewModel.setArrivalTime(System.currentTimeMillis() / 1000L);
+                    instance.transactionValidator.updateStatus(transactionViewModel);
+                    transactionViewModel.updateSender("local");
+                    transactionViewModel.update(instance.tangle, "sender");
+                }
+            }
+        } catch (Exception e) {
+            log.info("原始交易异常，可以忽略", e);
+        }
+
+        NodeUtils.requestSuperNodeToVerifyTransaction(instance.node.getSuperNode(), elements);
+        for (final TransactionViewModel transactionViewModel : elements) {
+            storeTransactionTOSqlite(transactionViewModel);
+        }
+        SqliteHelper.printTransaction();
+    }
+    private void storeTransactionTOSqlite(TransactionViewModel transactionViewModel) throws Exception {
+
+        // heffjo: persistence
+        Transaction transaction = transactionViewModel.getTransaction();
+        if (null == transaction.address) {
+            log.info("交易地址为空");
+            return;
+        }
+
+        SqliteHelper.saveTransaction(transactionViewModel);
+    }
 
 }
 
