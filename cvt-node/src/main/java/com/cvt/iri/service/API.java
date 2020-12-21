@@ -12,6 +12,7 @@ import com.cvt.iri.retrofit2.FileHashResponse;
 import com.cvt.iri.retrofit2.VerifyStorageResponse;
 import com.cvt.iri.service.dto.*;
 import com.cvt.iri.service.tipselection.impl.WalkValidatorImpl;
+import com.cvt.iri.utils.Converter;
 import com.cvt.iri.utils.IotaIOUtils;
 import com.cvt.iri.utils.UrlUtils;
 import com.google.gson.Gson;
@@ -639,6 +640,85 @@ public class API {
         }
         return RemoveNeighborsResponse.create(numberOfRemovedNeighbors);
     }
+    /**
+     * Returns the raw transaction data (trytes) of a specific transaction.
+     * These trytes can then be easily converted into the actual transaction object.
+     * See utility functions for more details.
+     *
+     * @param hashes List of transaction hashes you want to get trytes from.
+     * @return {@link com.cvt.iri.service.dto.GetTrytesResponse}
+     **/
+    private synchronized AbstractResponse getTrytesStatement(List<String> hashes) throws Exception {
+        final List<String> elements = new LinkedList<>();
+        for (final String hash : hashes) {
+            final TransactionViewModel transactionViewModel = TransactionViewModel.fromHash(instance.tangle, new Hash(hash));
+            if (transactionViewModel != null) {
+                elements.add(Converter.trytes(transactionViewModel.trits()));
+            }
+        }
+        if (elements.size() > maxGetTrytes) {
+            return ErrorResponse.create(overMaxErrorMessage);
+        }
+        return GetTrytesResponse.create(elements);
+    }
+
+    private static int counter_getTxToApprove = 0;
+
+    public static int getCounter_getTxToApprove() {
+        return counter_getTxToApprove;
+    }
+
+    public static void incCounter_getTxToApprove() {
+        counter_getTxToApprove++;
+    }
+
+    private static long ellapsedTime_getTxToApprove = 0L;
+
+    public static long getEllapsedTime_getTxToApprove() {
+        return ellapsedTime_getTxToApprove;
+    }
+
+    public static void incEllapsedTime_getTxToApprove(long ellapsedTime) {
+        ellapsedTime_getTxToApprove += ellapsedTime;
+    }
+
+    /**
+     * Tip selection which returns <code>trunkTransaction</code> and <code>branchTransaction</code>.
+     * The input value <code>depth</code> determines how many milestones to go back for finding the transactions to approve.
+     * The higher your <code>depth</code> value, the more work you have to do as you are confirming more transactions.
+     * If the <code>depth</code> is too large (usually above 15, it depends on the node's configuration) an error will be returned.
+     * The <code>reference</code> is an optional hash of a transaction you want to approve.
+     * If it can't be found at the specified <code>depth</code> then an error will be returned.
+     *
+     * @param depth     Number of bundles to go back to determine the transactions for approval.
+     * @param reference Hash of transaction to start random-walk from, used to make sure the tips returned reference a given transaction in their past.
+     * @return {@link com.cvt.iri.service.dto.GetTransactionsToApproveResponse}
+     **/
+    public synchronized List<Hash> getTransactionsToApproveStatement(int depth, Optional<Hash> reference) throws Exception {
+
+        if (invalidSubtangleStatus()) {
+            throw new IllegalStateException("This operations cannot be executed: The subtangle has not been updated yet.");
+        }
+
+        List<Hash> tips = instance.tipsSelector.getTransactionsToApprove(depth, reference);
+
+        if (log.isDebugEnabled()) {
+            gatherStatisticsOnTipSelection();
+        }
+
+        return tips;
+    }
+
+    private void gatherStatisticsOnTipSelection() {
+        API.incCounter_getTxToApprove();
+        if ((getCounter_getTxToApprove() % 100) == 0) {
+            String sb = "Last 100 getTxToApprove consumed " + API.getEllapsedTime_getTxToApprove() / 1000000000L + " seconds processing time.";
+            log.debug(sb);
+            counter_getTxToApprove = 0;
+            ellapsedTime_getTxToApprove = 0L;
+        }
+    }
+
 
 
 }
