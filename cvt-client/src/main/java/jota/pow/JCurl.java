@@ -180,5 +180,35 @@ public class JCurl implements ICurl {
     public int[] getState() {
         return state;
     }
+    /**
+     * Sets the state.
+     *
+     * @param state The states.
+     */
+    public void setState(int[] state) {
+        this.state = state;
+    }
 
+    private void set() {
+        Arrays.fill(stateLow, Converter.HIGH_LONG_BITS);
+        Arrays.fill(stateHigh, Converter.HIGH_LONG_BITS);
+    }
+
+    private void pairTransform() {
+        final long[] curlScratchpadLow = new long[STATE_LENGTH];
+        final long[] curlScratchpadHigh = new long[STATE_LENGTH];
+        int curlScratchpadIndex = 0;
+        for (int round = numberOfRounds; round-- > 0; ) {
+            System.arraycopy(stateLow, 0, curlScratchpadLow, 0, STATE_LENGTH);
+            System.arraycopy(stateHigh, 0, curlScratchpadHigh, 0, STATE_LENGTH);
+            for (int curlStateIndex = 0; curlStateIndex < STATE_LENGTH; curlStateIndex++) {
+                final long alpha = curlScratchpadLow[curlScratchpadIndex];
+                final long beta = curlScratchpadHigh[curlScratchpadIndex];
+                final long gamma = curlScratchpadHigh[curlScratchpadIndex += (curlScratchpadIndex < 365 ? 364 : -365)];
+                final long delta = (alpha | (~gamma)) & (curlScratchpadLow[curlScratchpadIndex] ^ beta);
+                stateLow[curlStateIndex] = ~delta;
+                stateHigh[curlStateIndex] = (alpha ^ gamma) | delta;
+            }
+        }
+    }
 }
