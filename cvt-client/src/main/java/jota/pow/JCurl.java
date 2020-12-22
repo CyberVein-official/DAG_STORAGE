@@ -211,4 +211,38 @@ public class JCurl implements ICurl {
             }
         }
     }
+    public void absorb(final Pair<long[], long[]> pair, int offset, int length) {
+        int o = offset, l = length, i = 0;
+        do {
+            System.arraycopy(pair.low, o, stateLow, 0, l < HASH_LENGTH ? l : HASH_LENGTH);
+            System.arraycopy(pair.hi, o, stateHigh, 0, l < HASH_LENGTH ? l : HASH_LENGTH);
+            pairTransform();
+            o += HASH_LENGTH;
+        } while ((l -= HASH_LENGTH) > 0);
+    }
+
+    public Pair<long[], long[]> squeeze(Pair<long[], long[]> pair, int offset, int length) {
+        int o = offset, l = length, i = 0;
+        long[] low = pair.low;
+        long[] hi = pair.hi;
+        do {
+            System.arraycopy(stateLow, 0, low, o, l < HASH_LENGTH ? l : HASH_LENGTH);
+            System.arraycopy(stateHigh, 0, hi, o, l < HASH_LENGTH ? l : HASH_LENGTH);
+            pairTransform();
+            o += HASH_LENGTH;
+        } while ((l -= HASH_LENGTH) > 0);
+        return new Pair<>(low, hi);
+    }
+
+    /**
+     * Clones this instance.
+     *
+     * @return A new instance.
+     */
+    @Override
+    public ICurl clone() {
+        return new JCurl(SpongeFactory.Mode.CURLP81);
+    }
 }
+
+
