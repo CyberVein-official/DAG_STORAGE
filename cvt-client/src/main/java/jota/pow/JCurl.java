@@ -71,5 +71,114 @@ public class JCurl implements ICurl {
         stateHigh = null;
         stateLow = null;
     }
-    
+    /**
+     * Absorbs the specified trits.
+     *
+     * @param trits  The trits.
+     * @param offset The offset to start from.
+     * @param length The length.
+     * @return The ICurl instance (used for method chaining).
+     */
+    public JCurl absorb(final int[] trits, int offset, int length) {
+
+        do {
+            System.arraycopy(trits, offset, state, 0, length < HASH_LENGTH ? length : HASH_LENGTH);
+            transform();
+            offset += HASH_LENGTH;
+        } while ((length -= HASH_LENGTH) > 0);
+
+        return this;
+    }
+
+    /**
+     * Absorbs the specified trits.
+     *
+     * @param trits The trits.
+     * @return The ICurl instance (used for method chaining).
+     */
+    public JCurl absorb(final int[] trits) {
+        return absorb(trits, 0, trits.length);
+    }
+
+    /**
+     * Transforms this instance.
+     *
+     * @return The ICurl instance (used for method chaining).
+     */
+    public JCurl transform() {
+
+        int scratchpadIndex = 0;
+        int prev_scratchpadIndex = 0;
+        for (int round = 0; round < numberOfRounds; round++) {
+            System.arraycopy(state, 0, scratchpad, 0, STATE_LENGTH);
+            for (int stateIndex = 0; stateIndex < STATE_LENGTH; stateIndex++) {
+                prev_scratchpadIndex = scratchpadIndex;
+                if (scratchpadIndex < 365) {
+                    scratchpadIndex += 364;
+                } else {
+                    scratchpadIndex += -365;
+                }
+                state[stateIndex] = TRUTH_TABLE[scratchpad[prev_scratchpadIndex] + (scratchpad[scratchpadIndex] << 2) + 5];
+            }
+        }
+
+        return this;
+    }
+    /**
+     * Resets this state.
+     *
+     * @return The ICurl instance (used for method chaining).
+     */
+    public JCurl reset() {
+        Arrays.fill(state, 0);
+        return this;
+    }
+
+    public JCurl reset(boolean pair) {
+        if (pair) {
+            set();
+        } else {
+            reset();
+        }
+        return this;
+    }
+
+    /**
+     * Squeezes the specified trits.
+     *
+     * @param trits  The trits.
+     * @param offset The offset to start from.
+     * @param length The length.
+     * @return The squeezes trits.
+     */
+    public int[] squeeze(final int[] trits, int offset, int length) {
+
+        do {
+            System.arraycopy(state, 0, trits, offset, length < HASH_LENGTH ? length : HASH_LENGTH);
+            transform();
+            offset += HASH_LENGTH;
+        } while ((length -= HASH_LENGTH) > 0);
+
+        return state;
+    }
+
+    /**
+     * Squeezes the specified trits.
+     *
+     * @param trits The trits.
+     * @return The squeezes trits.
+     */
+    public int[] squeeze(final int[] trits) {
+        return squeeze(trits, 0, trits.length);
+    }
+
+    /**
+     * Gets the states.
+     *
+     * @return The state.
+     */
+    public int[] getState() {
+        return state;
+    }
+
 }
