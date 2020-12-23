@@ -38,5 +38,25 @@ public class SendTransferResponse extends AbstractResponse {
      *
      * @param transactions The transactions.
      */
+    public void setTransactions(List<Transaction> transactions) {
+        this.transactions = transactions;
+    }
 
+    /**
+     * Gets the successfully.
+     *
+     * @return The successfully.
+     */
+    public Boolean[] getSuccessfully() {
+        return successfully;
+    }
+
+    /**
+     * Sets the successfully.
+     *
+     * @param successfully The successfully.
+     */
+    public void setSuccessfully(Boolean[] successfully) {
+        this.successfully = successfully;
+    }
 }
