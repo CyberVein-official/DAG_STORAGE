@@ -235,6 +235,8 @@ public class JCurl implements ICurl {
     }
 
     /**
+     *
+     *
      * Clones this instance.
      *
      * @return A new instance.
