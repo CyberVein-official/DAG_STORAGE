@@ -819,6 +819,123 @@ public class API {
         }
         return str;
     }
+    /**
+     * Returns the set of neighbors you are connected with, as well as their activity statistics (or counters).
+     * The activity counters are reset after restarting IRI.
+     *
+     * @return {@link com.cvt.iri.service.dto.GetNeighborsResponse}
+     **/
+    private AbstractResponse getNeighborsStatement() {
+        return GetNeighborsResponse.create(instance.node.getNeighbors());
+    }
+
+    /**
+     * Interrupts and completely aborts the <code>attachToTangle</code> process.
+     *
+     * @return {@link com.cvt.iri.service.dto.AbstractResponse}
+     **/
+    private AbstractResponse interruptAttachingToTangleStatement() {
+        pearlDiver.cancel();
+        return AbstractResponse.createEmptyResponse();
+    }
+
+    /**
+     * Returns information about your node.
+     *
+     * @return {@link com.cvt.iri.service.dto.GetNodeInfoResponse}
+     **/
+    private AbstractResponse getNodeInfoStatement() {
+        String name = instance.configuration.isTestnet() ? IRI.TESTNET_NAME : IRI.MAINNET_NAME;
+        return GetNodeInfoResponse.create(name, IRI.VERSION, Runtime.getRuntime().availableProcessors(),
+                Runtime.getRuntime().freeMemory(), System.getProperty("java.version"), Runtime.getRuntime().maxMemory(),
+                Runtime.getRuntime().totalMemory(), instance.milestone.latestMilestone, instance.milestone.latestMilestoneIndex,
+                instance.milestone.latestSolidSubtangleMilestone, instance.milestone.latestSolidSubtangleMilestoneIndex, instance.milestone.milestoneStartIndex,
+                instance.node.howManyNeighbors(), instance.node.queuedTransactionsSize(),
+                System.currentTimeMillis(), instance.tipsViewModel.size(),
+                instance.transactionRequester.numberOfTransactionsToRequest());
+    }
+
+    /**
+     * Get the inclusion states of a set of transactions.
+     * This is for determining if a transaction was accepted and confirmed by the network or not.
+     * You can search for multiple tips (and thus, milestones) to get past inclusion states of transactions.
+     * <p>
+     * This API call simply returns a list of boolean values in the same order as the transaction list you submitted, thus you get a true/false whether a transaction is confirmed or not.
+     * Returns an {@link com.cvt.iri.service.dto.ErrorResponse} if a tip is missing or the subtangle is not solid
+     *
+     * @param transactions List of transactions you want to get the inclusion state for.
+     * @param tips         List of tips (including milestones) you want to search for the inclusion state.
+     * @return {@link com.cvt.iri.service.dto.GetInclusionStatesResponse}
+     **/
+    private AbstractResponse getInclusionStatesStatement(final List<String> transactions, final List<String> tips) throws Exception {
+        final List<Hash> trans = transactions.stream().map(Hash::new).collect(Collectors.toList());
+        final List<Hash> tps = tips.stream().map(Hash::new).collect(Collectors.toList());
+        int numberOfNonMetTransactions = transactions.size();
+        final byte[] inclusionStates = new byte[numberOfNonMetTransactions];
+
+        List<Integer> tipsIndex = new LinkedList<>();
+        {
+            for (Hash tip : tps) {
+                TransactionViewModel tx = TransactionViewModel.fromHash(instance.tangle, tip);
+                if (tx.getType() != TransactionViewModel.PREFILLED_SLOT) {
+                    tipsIndex.add(tx.snapshotIndex());
+                }
+            }
+        }
+        int minTipsIndex = tipsIndex.stream().reduce((a, b) -> a < b ? a : b).orElse(0);
+        if (minTipsIndex > 0) {
+            int maxTipsIndex = tipsIndex.stream().reduce((a, b) -> a > b ? a : b).orElse(0);
+            int count = 0;
+            for (Hash hash : trans) {
+                TransactionViewModel transaction = TransactionViewModel.fromHash(instance.tangle, hash);
+                if (transaction.getType() == TransactionViewModel.PREFILLED_SLOT || transaction.snapshotIndex() == 0) {
+                    inclusionStates[count] = -1;
+                } else if (transaction.snapshotIndex() > maxTipsIndex) {
+                    inclusionStates[count] = -1;
+                } else if (transaction.snapshotIndex() < maxTipsIndex) {
+                    inclusionStates[count] = 1;
+                }
+                count++;
+            }
+        }
+
+        Set<Hash> analyzedTips = new HashSet<>();
+        Map<Integer, Integer> sameIndexTransactionCount = new HashMap<>();
+        Map<Integer, Queue<Hash>> sameIndexTips = new HashMap<>();
+        for (final Hash tip : tps) {
+            TransactionViewModel transactionViewModel = TransactionViewModel.fromHash(instance.tangle, tip);
+            if (transactionViewModel.getType() == TransactionViewModel.PREFILLED_SLOT) {
+                return ErrorResponse.create("One of the tips is absent");
+            }
+            int snapshotIndex = transactionViewModel.snapshotIndex();
+            sameIndexTips.putIfAbsent(snapshotIndex, new LinkedList<>());
+            sameIndexTips.get(snapshotIndex).add(tip);
+        }
+        for (int i = 0; i < inclusionStates.length; i++) {
+            if (inclusionStates[i] == 0) {
+                TransactionViewModel transactionViewModel = TransactionViewModel.fromHash(instance.tangle, trans.get(i));
+                int snapshotIndex = transactionViewModel.snapshotIndex();
+                sameIndexTransactionCount.putIfAbsent(snapshotIndex, 0);
+                sameIndexTransactionCount.put(snapshotIndex, sameIndexTransactionCount.get(snapshotIndex) + 1);
+            }
+        }
+        for (Integer index : sameIndexTransactionCount.keySet()) {
+            Queue<Hash> sameIndexTip = sameIndexTips.get(index);
+            if (sameIndexTip != null) {
+                //has tips in the same index level
+                if (!exhaustiveSearchWithinIndex(sameIndexTip, analyzedTips, trans, inclusionStates, sameIndexTransactionCount.get(index), index)) {
+                    return ErrorResponse.create("The subtangle is not solid");
+                }
+            }
+        }
+        final boolean[] inclusionStatesBoolean = new boolean[inclusionStates.length];
+        for (int i = 0; i < inclusionStates.length; i++) {
+            inclusionStatesBoolean[i] = inclusionStates[i] == 1;
+        }
+        {
+            return GetInclusionStatesResponse.create(inclusionStatesBoolean);
+        }
+    }
 
 }
 
