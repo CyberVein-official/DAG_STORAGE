@@ -5,6 +5,7 @@ import com.cvt.iri.coinbase.CoinBaseService;
 import com.cvt.iri.coinbase.StandardCoinBaseService;
 import com.cvt.iri.conf.APIConfig;
 import com.cvt.iri.controllers.AddressViewModel;
+import com.cvt.iri.controllers.TagViewModel;
 import com.cvt.iri.controllers.TransactionViewModel;
 import com.cvt.iri.model.Hash;
 import com.cvt.iri.pdp.MockPdpService;
@@ -12,6 +13,7 @@ import com.cvt.iri.retrofit2.FileHashResponse;
 import com.cvt.iri.retrofit2.VerifyStorageResponse;
 import com.cvt.iri.service.dto.*;
 import com.cvt.iri.service.tipselection.impl.WalkValidatorImpl;
+import com.cvt.iri.storage.CvtPersistable;
 import com.cvt.iri.storage.sqllite.SqliteHelper;
 import com.cvt.iri.utils.Converter;
 import com.cvt.iri.utils.IotaIOUtils;
@@ -936,6 +938,128 @@ public class API {
             return GetInclusionStatesResponse.create(inclusionStatesBoolean);
         }
     }
+    private boolean exhaustiveSearchWithinIndex(Queue<Hash> nonAnalyzedTransactions, Set<Hash> analyzedTips, List<Hash> transactions, byte[] inclusionStates, int count, int index) throws Exception {
+        Hash pointer;
+        MAIN_LOOP:
+        while ((pointer = nonAnalyzedTransactions.poll()) != null) {
+            if (analyzedTips.add(pointer)) {
+                final TransactionViewModel transactionViewModel = TransactionViewModel.fromHash(instance.tangle, pointer);
+                if (transactionViewModel.snapshotIndex() == index) {
+                    if (transactionViewModel.getType() == TransactionViewModel.PREFILLED_SLOT) {
+                        return false;
+                    } else {
+                        for (int i = 0; i < inclusionStates.length; i++) {
+                            if (inclusionStates[i] < 1 && pointer.equals(transactions.get(i))) {
+                                inclusionStates[i] = 1;
+                                if (--count <= 0) {
+                                    break MAIN_LOOP;
+                                }
+                            }
+                        }
+                        nonAnalyzedTransactions.offer(transactionViewModel.getTrunkTransactionHash());
+                        nonAnalyzedTransactions.offer(transactionViewModel.getBranchTransactionHash());
+                    }
+                }
+            }
+        }
+        return true;
+    }
+    /**
+     * Find the transactions which match the specified input and return.
+     * All input values are lists, for which a list of return values (transaction hashes), in the same order, is returned for all individual elements.
+     * The input fields can either be <code>bundles<code>, <code>addresses</code>, <code>tags</code> or <code>approvees</code>.
+     * <b>Using multiple of these input fields returns the intersection of the values.</b>
+     * <p>
+     * Returns an {@link com.cvt.iri.service.dto.ErrorResponse} if more than maxFindTxs was found
+     *
+     * @param request the map with input fields
+     * @return {@link com.cvt.iri.service.dto.FindTransactionsResponse}
+     **/
+    private synchronized AbstractResponse findTransactionsStatement(final Map<String, Object> request) throws Exception {
 
+        final Set<Hash> foundTransactions = new HashSet<>();
+        boolean containsKey = false;
+
+        final Set<Hash> bundlesTransactions = new HashSet<>();
+        if (request.containsKey("bundles")) {
+            final HashSet<String> bundles = getParameterAsSet(request, "bundles", HASH_SIZE);
+            for (final String bundle : bundles) {
+                bundlesTransactions.addAll(BundleViewModel.load(instance.tangle, new Hash(bundle)).getHashes());
+            }
+            foundTransactions.addAll(bundlesTransactions);
+            containsKey = true;
+        }
+
+        final Set<Hash> addressesTransactions = new HashSet<>();
+        if (request.containsKey("addresses")) {
+            final HashSet<String> addresses = getParameterAsSet(request, "addresses", HASH_SIZE);
+            for (final String address : addresses) {
+                addressesTransactions.addAll(AddressViewModel.load(instance.tangle, new Hash(address)).getHashes());
+
+                CvtPersistable transaction = SqliteHelper.getTransaction(address);
+                if (null != transaction) {
+                    addressesTransactions.add(new Hash(address));
+                }
+            }
+            foundTransactions.addAll(addressesTransactions);
+
+            containsKey = true;
+        }
+
+        final Set<Hash> tagsTransactions = new HashSet<>();
+        if (request.containsKey("tags")) {
+            final HashSet<String> tags = getParameterAsSet(request, "tags", 0);
+            for (String tag : tags) {
+                tag = padTag(tag);
+                tagsTransactions.addAll(TagViewModel.load(instance.tangle, new Hash(tag)).getHashes());
+            }
+            if (tagsTransactions.isEmpty()) {
+                for (String tag : tags) {
+                    tag = padTag(tag);
+                    tagsTransactions.addAll(TagViewModel.loadObsolete(instance.tangle, new Hash(tag)).getHashes());
+                }
+            }
+            foundTransactions.addAll(tagsTransactions);
+            containsKey = true;
+        }
+
+        final Set<Hash> approveeTransactions = new HashSet<>();
+
+        if (request.containsKey("approvees")) {
+            final HashSet<String> approvees = getParameterAsSet(request, "approvees", HASH_SIZE);
+            for (final String approvee : approvees) {
+                approveeTransactions.addAll(TransactionViewModel.fromHash(instance.tangle, new Hash(approvee)).getApprovers(instance.tangle).getHashes());
+            }
+            foundTransactions.addAll(approveeTransactions);
+            containsKey = true;
+        }
+
+        if (!containsKey) {
+            throw new ValidationException(invalidParams);
+        }
+
+        //Using multiple of these input fields returns the intersection of the values.
+        if (request.containsKey("bundles")) {
+            foundTransactions.retainAll(bundlesTransactions);
+        }
+        if (request.containsKey("addresses")) {
+            foundTransactions.retainAll(addressesTransactions);
+        }
+        if (request.containsKey("tags")) {
+            foundTransactions.retainAll(tagsTransactions);
+        }
+        if (request.containsKey("approvees")) {
+            foundTransactions.retainAll(approveeTransactions);
+        }
+        if (foundTransactions.size() > maxFindTxs) {
+            return ErrorResponse.create(overMaxErrorMessage);
+        }
+
+        final List<String> elements = foundTransactions.stream()
+                .map(Hash::toString)
+                .collect(Collectors.toCollection(LinkedList::new));
+
+        return FindTransactionsResponse.create(elements);
+    }
 }
 
