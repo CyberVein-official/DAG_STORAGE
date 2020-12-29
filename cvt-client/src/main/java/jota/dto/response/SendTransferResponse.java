@@ -29,7 +29,7 @@ public class SendTransferResponse extends AbstractResponse {
      *
      * @return The transactions.
      */
-    public List<Transaction> getTransactions() {
+    public List<Transaction > getTransactions() {
         return transactions;
     }
 

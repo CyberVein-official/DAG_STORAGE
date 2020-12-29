@@ -46,5 +46,6 @@ public interface SnapshotConfig extends Config {
                 "leaves (private keys) that the coordinator can use to sign a message.";
         String PREVIOUS_EPOCH_SPENT_ADDRESSES_FILE = "The file that contains the list of all used addresses " +
                 "from previous epochs";
+
     }
 }

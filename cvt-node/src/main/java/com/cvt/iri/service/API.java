@@ -1042,15 +1042,19 @@ public class API {
         if (request.containsKey("bundles")) {
             foundTransactions.retainAll(bundlesTransactions);
         }
+
         if (request.containsKey("addresses")) {
             foundTransactions.retainAll(addressesTransactions);
         }
+
         if (request.containsKey("tags")) {
             foundTransactions.retainAll(tagsTransactions);
         }
+
         if (request.containsKey("approvees")) {
             foundTransactions.retainAll(approveeTransactions);
         }
+
         if (foundTransactions.size() > maxFindTxs) {
             return ErrorResponse.create(overMaxErrorMessage);
         }
@@ -1061,5 +1065,6 @@ public class API {
 
         return FindTransactionsResponse.create(elements);
     }
+
 }
 
