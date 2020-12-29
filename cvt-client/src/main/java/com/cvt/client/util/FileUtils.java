@@ -71,4 +71,49 @@ public class FileUtils {
         }
     }
 
+    public static List<FileHashPair> signFiles(String outDir) throws Exception {
+        File dir = new File(outDir);
+        if (!dir.isDirectory()) {
+            return new ArrayList<>();
+        }
+        File[] fileList = dir.listFiles();
+        if (null == fileList) {
+            return new ArrayList<>();
+        }
+        List<FileHashPair> fileHashPairList = new ArrayList<>();
+        for (File file : fileList) {
+            try (FileInputStream is = new FileInputStream(file)) {
+                fileHashPairList.add(new FileHashPair(file.getAbsolutePath(), DigestUtils.md5Hex(IOUtils.toString(is, StandardCharsets.UTF_8))));
+            }
+        }
+        return fileHashPairList;
+    }
+    public static class FileHashPair {
+        String filePath;
+        String hash;
+
+        public FileHashPair() {
+        }
+
+        public FileHashPair(String filePath, String hash) {
+            this.filePath = filePath;
+            this.hash = hash;
+        }
+
+        public String getFilePath() {
+            return filePath;
+        }
+
+        public void setFilePath(String filePath) {
+            this.filePath = filePath;
+        }
+
+        public String getHash() {
+            return hash;
+        }
+
+        public void setHash(String hash) {
+            this.hash = hash;
+        }
+    }
 }
