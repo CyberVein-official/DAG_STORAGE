@@ -123,13 +123,6 @@ public class IXI {
         handlePathEvent(ixiEvent, changedPath);
     }
 
-    private void handleModulePathEvent(Path watchedPath, IxiEvent ixiEvent, Path changedPath) {
-        if (watchedPath != rootPath && Files.isDirectory(changedPath)) { // we are only interested in dir changes in tree depth level 2
-            return;
-        }
-        handlePathEvent(ixiEvent, changedPath);
-    }
-
     private void handlePathEvent(IxiEvent ixiEvent, Path changedPath) {
         switch(ixiEvent) {
             case CREATE_MODULE:
@@ -169,6 +162,41 @@ public class IXI {
     }
 
 
+
+    private void watch(Path dir) {
+        try {
+            WatchKey watchKey = dir.register(watcher, new WatchEvent.Kind[]{ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY}, SensitivityWatchEventModifier.HIGH);
+            watchKeys.put(watchKey, dir);
+        } catch (IOException e) {
+            log.error("Could not create watcher for path '" + dir + "'.");
+        }
+    }
+
+    private void unwatch(Path dir) {
+        // TODO: Get watchkey for 'dir' in an optimized way
+        Optional<WatchKey> dirKey = watchKeys.keySet().stream().filter(watchKey -> watchKeys.get(watchKey).equals(dir)).findFirst();
+        if (dirKey.isPresent()) {
+            watchKeys.remove(dirKey.get());
+            dirKey.get().cancel();
+        }
+    }
+
+    private Path getPackagePath(Path modulePath) {
+        return modulePath.resolve("package.json");
+    }
+
+    public AbstractResponse processCommand(final String command, Map<String, Object> request) {
+        Pattern pattern = Pattern.compile("^(.*)\\.(.*)$");
+        Matcher matcher = pattern.matcher(command);
+
+        if (matcher.find()) {
+            Map<String, CallableRequest<AbstractResponse>> ixiMap = ixiAPI.get(matcher.group(1));
+            if (ixiMap != null) {
+                return ixiMap.get(matcher.group(2)).call(request);
+            }
+        }
+        return null;
+    }
 
 
 
