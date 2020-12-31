@@ -104,7 +104,62 @@ public class IXI {
         }
     }
 
+    private String getModuleName(Path modulePath, boolean checkIfIsDir) {
+        return rootPath.relativize(!checkIfIsDir || Files.isDirectory(modulePath) ? modulePath : modulePath.getParent()).toString();
+    }
 
+    private Path getRealPath(Path currentPath) {
+        if (Files.isDirectory(currentPath.getParent()) && !currentPath.getParent().equals(rootPath)) {
+            return currentPath.getParent();
+        } else {
+            return currentPath;
+        }
+    }
+
+    private void handleModulePathEvent(Path watchedPath, IxiEvent ixiEvent, Path changedPath) {
+        if (watchedPath != rootPath && Files.isDirectory(changedPath)) { // we are only interested in dir changes in tree depth level 2
+            return;
+        }
+        handlePathEvent(ixiEvent, changedPath);
+    }
+
+    private void handlePathEvent(IxiEvent ixiEvent, Path changedPath) {
+        switch(ixiEvent) {
+            case CREATE_MODULE:
+                if (checkOs() == OsVariants.Unix) {
+                    watch(changedPath);
+                    loadModule(changedPath);
+                }
+                break;
+            case MODIFY_MODULE:
+                Long lastModification = loadedLastTime.get(getRealPath(changedPath));
+                if (lastModification == null || Instant.now().toEpochMilli() - lastModification > 50L) {
+                    if (ixiLifetime.containsKey(getModuleName(changedPath, true))) {
+                        unloadModule(changedPath);
+                    }
+                    loadedLastTime.put(getRealPath(changedPath), Instant.now().toEpochMilli());
+                    loadModule(getRealPath(changedPath));
+                }
+                break;
+            case DELETE_MODULE:
+                Path realPath = getRealPath(changedPath);
+                unwatch(realPath);
+                if (ixiLifetime.containsKey(getModuleName(realPath, false))) {
+                    unloadModule(changedPath);
+                }
+                break;
+            default:
+        }
+    }
+
+    private static OsVariants checkOs() {
+        String os = System.getProperty("os.name");
+        if (os.startsWith("Windows")) {
+            return OsVariants.Windows;
+        } else {
+            return OsVariants.Unix;
+        }
+    }
 
 
 
