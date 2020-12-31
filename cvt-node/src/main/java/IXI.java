@@ -123,6 +123,13 @@ public class IXI {
         handlePathEvent(ixiEvent, changedPath);
     }
 
+    private void handleModulePathEvent(Path watchedPath, IxiEvent ixiEvent, Path changedPath) {
+        if (watchedPath != rootPath && Files.isDirectory(changedPath)) { // we are only interested in dir changes in tree depth level 2
+            return;
+        }
+        handlePathEvent(ixiEvent, changedPath);
+    }
+
     private void handlePathEvent(IxiEvent ixiEvent, Path changedPath) {
         switch(ixiEvent) {
             case CREATE_MODULE:
