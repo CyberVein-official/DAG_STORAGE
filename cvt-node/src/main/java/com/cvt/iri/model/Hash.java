@@ -32,6 +32,7 @@ public final class Hash implements Serializable, Indexable, HashId {
         }
     }
 
+
     private final class TritSafe {
         private final byte[] trits;
 
