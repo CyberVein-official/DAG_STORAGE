@@ -172,6 +172,7 @@ public class IXI {
         }
     }
 
+
     private void unwatch(Path dir) {
         // TODO: Get watchkey for 'dir' in an optimized way
         Optional<WatchKey> dirKey = watchKeys.keySet().stream().filter(watchKey -> watchKeys.get(watchKey).equals(dir)).findFirst();
@@ -197,7 +198,100 @@ public class IXI {
         }
         return null;
     }
+    private void loadModule(Path modulePath) {
+        log.info("Searching: " + modulePath);
+        Path packageJsonPath = getPackagePath(modulePath);
+        if (!Files.exists(packageJsonPath)) {
+            log.info("No package.json found in " + modulePath);
+            return;
+        }
+        final Map packageJson;
+        Reader packageJsonReader;
+        try {
+            packageJsonReader = new FileReader(packageJsonPath.toFile());
+            packageJson = gson.fromJson(packageJsonReader, Map.class);
+        } catch (FileNotFoundException e) {
+            log.error("Could not load " + packageJsonPath.toString());
+            return;
+        }
+        try {
+            packageJsonReader.close();
+        } catch (IOException e) {
+            log.error("Could not close file " + packageJsonPath.toString());
+        }
+        if(packageJson != null && packageJson.get("main") != null) {
+            log.info("Loading module: " + getModuleName(modulePath, true));
+            Path pathToMain = Paths.get(modulePath.toString(), (String) packageJson.get("main"));
+            attach(pathToMain, getModuleName(modulePath, true));
+        } else {
+            log.info("No start script found");
+        }
+    }
 
+    private void unloadModule(Path moduleNamePath) {
+        log.debug("Unloading module: " + moduleNamePath);
+        Path realPath = getRealPath(moduleNamePath);
+        String moduleName = getModuleName(realPath, false);
+        detach(moduleName);
+        ixiAPI.remove(moduleName);
+    }
+    rivate void unloadModule(Path moduleNamePath) {
+        log.debug("Unloading module: " + moduleNamePath);
+        Path realPath = getRealPath(moduleNamePath);
+        String moduleName = getModuleName(realPath, false);
+        detach(moduleName);
+        ixiAPI.remove(moduleName);
+    }
 
+    private void attach(Path pathToMain, String moduleName) {
+        Reader ixiModuleReader;
+        try {
+            ixiModuleReader = new FileReader(pathToMain.toFile());
+        } catch (FileNotFoundException e) {
+            log.error("Could not load " + pathToMain);
+            return;
+        }
+        log.info("Starting script: " + pathToMain);
+        Map<String, CallableRequest<AbstractResponse>> ixiMap = new HashMap<>();
+        Map<String, Runnable> startStop = new HashMap<>();
+
+        Bindings bindings = scriptEngine.createBindings();
+        bindings.put("API", ixiMap);
+        bindings.put("IXICycle", startStop);
+        bindings.put("CVT", cvt);
+
+        ixiAPI.put(moduleName, ixiMap);
+        ixiLifetime.put(moduleName, startStop);
+        try {
+            scriptEngine.eval(ixiModuleReader, bindings);
+        } catch (ScriptException e) {
+            log.error("Script error");
+        }
+        try {
+            ixiModuleReader.close();
+        } catch (IOException e) {
+            log.error("Could not close " + pathToMain);
+        }
+    }
+    private void detach(String moduleName) {
+        Map<String, Runnable> ixiMap = ixiLifetime.get(moduleName);
+        if(ixiMap != null) {
+            Runnable stop = ixiMap.get("shutdown");
+            if (stop != null) {
+                stop.run();
+            }
+        }
+        ixiLifetime.remove(moduleName);
+    }
+
+    public void shutdown() throws InterruptedException, IOException {
+        if(dirWatchThread != null) {
+            shutdown = true;
+            dirWatchThread.join();
+            ixiAPI.keySet().forEach(this::detach);
+            ixiAPI.clear();
+            ixiLifetime.clear();
+        }
+    }
 
 }
