@@ -273,25 +273,5 @@ public class IXI {
             log.error("Could not close " + pathToMain);
         }
     }
-    private void detach(String moduleName) {
-        Map<String, Runnable> ixiMap = ixiLifetime.get(moduleName);
-        if(ixiMap != null) {
-            Runnable stop = ixiMap.get("shutdown");
-            if (stop != null) {
-                stop.run();
-            }
-        }
-        ixiLifetime.remove(moduleName);
-    }
-
-    public void shutdown() throws InterruptedException, IOException {
-        if(dirWatchThread != null) {
-            shutdown = true;
-            dirWatchThread.join();
-            ixiAPI.keySet().forEach(this::detach);
-            ixiAPI.clear();
-            ixiLifetime.clear();
-        }
-    }
 
 }
