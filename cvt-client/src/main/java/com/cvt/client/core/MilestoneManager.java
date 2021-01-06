@@ -52,6 +52,22 @@ public class MilestoneManager {
         }
         log.info(StringUtils.center("New milestone created.", 120, "="));
     }
-
+    public void newMilestone(CvtAPI api, String tip1, String tip2, long index) throws Exception {
+        final Bundle bundle = new Bundle();
+        String tag = Converter.trytes(Converter.trits(index, TAG_TRINARY_SIZE));
+        long timestamp = System.currentTimeMillis() / 1000;
+        bundle.addEntry(1, TESTNET_COORDINATOR_ADDRESS, 0, tag, timestamp);
+        bundle.addEntry(1, NULL_ADDRESS, 0, tag, timestamp);
+        bundle.finalize(null);
+        bundle.addTrytes(Collections.<String>emptyList());
+        List<String> trytes = new ArrayList<>();
+        for (Transaction trx : bundle.getTransactions()) {
+            trytes.add(trx.toTrytes());
+        }
+        Collections.reverse(trytes);
+        GetAttachToTangleResponse rrr = api.attachToTangle(tip1, tip2, 13, (String[]) trytes.toArray(new String[trytes.size()]));
+        api.storeTransactions(rrr.getTrytes());
+        api.broadcastTransactions(rrr.getTrytes());
+    }
 
 }
