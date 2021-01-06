@@ -24,6 +24,7 @@ public class CvtGetInclusionStateRequest extends CvtCommandRequest {
     /**
      * Create a new instance of the CvtGetInclusionStateRequest class.
      */
+
     public static CvtGetInclusionStateRequest createGetInclusionStateRequest(String[] transactions, String[] tips) {
         return new CvtGetInclusionStateRequest(transactions, tips);
     }

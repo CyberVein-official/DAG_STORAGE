@@ -41,5 +41,6 @@ public class CvtCheckConsistencyRequest extends CvtCommandRequest {
     public void setTails(String[] tails) {
         this.tails = tails;
     }
+
 }
 
