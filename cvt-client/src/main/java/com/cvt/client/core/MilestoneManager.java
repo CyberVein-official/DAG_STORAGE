@@ -64,10 +64,27 @@ public class MilestoneManager {
         for (Transaction trx : bundle.getTransactions()) {
             trytes.add(trx.toTrytes());
         }
+
         Collections.reverse(trytes);
         GetAttachToTangleResponse rrr = api.attachToTangle(tip1, tip2, 13, (String[]) trytes.toArray(new String[trytes.size()]));
         api.storeTransactions(rrr.getTrytes());
         api.broadcastTransactions(rrr.getTrytes());
     }
 
+    public void heartbeat(final long timeToSleep) {
+        new Thread(() -> {
+            while (HEARTBEAT) {
+                try {
+                    newMileStone(null);
+                    Thread.sleep(timeToSleep);
+                } catch (Exception e) {
+                    MilestoneManager.log.error(e.getMessage());
+                }
+            }
+        }).start();
+    }
+
+    public void stopHeartbeat() {
+        HEARTBEAT = false;
+    }
 }
