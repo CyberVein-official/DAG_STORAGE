@@ -50,6 +50,7 @@ public class CvtGetInclusionStateRequest extends CvtCommandRequest {
     /**
      * Sets the transactions.
      *
+     *
      * @param transactions The transactions.
      */
     public void setTransactions(String[] transactions) {
