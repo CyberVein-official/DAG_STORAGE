@@ -24,7 +24,36 @@ public class TipsViewModel {
         }
     }
 
+    public void removeTipHash(Hash hash) {
+        synchronized (sync) {
+            if (!tips.remove(hash)) {
+                solidTips.remove(hash);
+            }
+        }
+    }
 
+    public void setSolid(Hash tip) {
+        synchronized (sync) {
+            if (tips.remove(tip)) {
+                solidTips.add(tip);
+            }
+        }
+    }
+    public Set<Hash> getTips() {
+        Set<Hash> hashes = new HashSet<>();
+        synchronized (sync) {
+            Iterator<Hash> hashIterator;
+            hashIterator = tips.iterator();
+            while (hashIterator.hasNext()) {
+                hashes.add(hashIterator.next());
+            }
 
+            hashIterator = solidTips.iterator();
+            while (hashIterator.hasNext()) {
+                hashes.add(hashIterator.next());
+            }
+        }
+        return hashes;
+    }
 
 }
