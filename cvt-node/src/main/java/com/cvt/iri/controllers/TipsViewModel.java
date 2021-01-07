@@ -24,20 +24,7 @@ public class TipsViewModel {
         }
     }
 
-    public void removeTipHash(Hash hash) {
-        synchronized (sync) {
-            if (!tips.remove(hash)) {
-                solidTips.remove(hash);
-            }
-        }
-    }
 
-    public void setSolid(Hash tip) {
-        synchronized (sync) {
-            if (tips.remove(tip)) {
-                solidTips.add(tip);
-            }
-        }
-    }
+
 
 }
