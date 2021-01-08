@@ -24,7 +24,72 @@ public class TipsViewModel {
         }
     }
 
+    public void removeTipHash(Hash hash) {
+        synchronized (sync) {
+            if (!tips.remove(hash)) {
+                solidTips.remove(hash);
+            }
+        }
+    }
 
+    public void setSolid(Hash tip) {
+        synchronized (sync) {
+            if (tips.remove(tip)) {
+                solidTips.add(tip);
+            }
+        }
+    }
+    public Set<Hash> getTips() {
+        Set<Hash> hashes = new HashSet<>();
+        synchronized (sync) {
+            Iterator<Hash> hashIterator;
+            hashIterator = tips.iterator();
+            while (hashIterator.hasNext()) {
+                hashes.add(hashIterator.next());
+            }
 
+            hashIterator = solidTips.iterator();
+            while (hashIterator.hasNext()) {
+                hashes.add(hashIterator.next());
+            }
+        }
+        return hashes;
+    }
+
+    public Hash getRandomSolidTipHash() {
+        synchronized (sync) {
+            int size = solidTips.size();
+            if (size == 0) {
+                return getRandomNonSolidTipHash();
+            }
+            int index = seed.nextInt(size);
+            Iterator<Hash> hashIterator;
+            hashIterator = solidTips.iterator();
+            Hash hash = null;
+            while (index-- >= 0 && hashIterator.hasNext()) {
+                hash = hashIterator.next();
+            }
+            return hash;
+            //return solidTips.size() != 0 ? solidTips.get(seed.nextInt(solidTips.size())) : getRandomNonSolidTipHash();
+        }
+    }
+
+    public Hash getRandomNonSolidTipHash() {
+        synchronized (sync) {
+            int size = tips.size();
+            if (size == 0) {
+                return null;
+            }
+            int index = seed.nextInt(size);
+            Iterator<Hash> hashIterator;
+            hashIterator = tips.iterator();
+            Hash hash = null;
+            while (index-- >= 0 && hashIterator.hasNext()) {
+                hash = hashIterator.next();
+            }
+            return hash;
+            //return tips.size() != 0 ? tips.get(seed.nextInt(tips.size())) : null;
+        }
+    }
 
 }
