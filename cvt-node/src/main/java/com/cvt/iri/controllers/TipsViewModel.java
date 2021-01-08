@@ -109,4 +109,14 @@ public class TipsViewModel {
         }
     }
 
-}
+    private class FifoHashCache<K> {
+
+        private final int capacity;
+        private final LinkedHashSet<K> set;
+
+        public FifoHashCache(int capacity) {
+            this.capacity = capacity;
+            this.set = new LinkedHashSet<>();
+        }
+
+    }
