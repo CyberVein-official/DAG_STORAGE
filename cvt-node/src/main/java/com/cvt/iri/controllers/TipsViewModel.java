@@ -56,4 +56,21 @@ public class TipsViewModel {
         return hashes;
     }
 
+    public Hash getRandomSolidTipHash() {
+        synchronized (sync) {
+            int size = solidTips.size();
+            if (size == 0) {
+                return getRandomNonSolidTipHash();
+            }
+            int index = seed.nextInt(size);
+            Iterator<Hash> hashIterator;
+            hashIterator = solidTips.iterator();
+            Hash hash = null;
+            while (index-- >= 0 && hashIterator.hasNext()) {
+                hash = hashIterator.next();
+            }
+            return hash;
+            //return solidTips.size() != 0 ? solidTips.get(seed.nextInt(solidTips.size())) : getRandomNonSolidTipHash();
+        }
+    }
 }
