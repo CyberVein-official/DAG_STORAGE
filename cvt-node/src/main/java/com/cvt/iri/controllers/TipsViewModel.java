@@ -39,6 +39,7 @@ public class TipsViewModel {
             }
         }
     }
+
     public Set<Hash> getTips() {
         Set<Hash> hashes = new HashSet<>();
         synchronized (sync) {
@@ -69,6 +70,8 @@ public class TipsViewModel {
             while (index-- >= 0 && hashIterator.hasNext()) {
                 hash = hashIterator.next();
             }
+
+
             return hash;
             //return solidTips.size() != 0 ? solidTips.get(seed.nextInt(solidTips.size())) : getRandomNonSolidTipHash();
         }
@@ -91,6 +94,7 @@ public class TipsViewModel {
             //return tips.size() != 0 ? tips.get(seed.nextInt(tips.size())) : null;
         }
     }
+
     public int nonSolidSize() {
         synchronized (sync) {
             return tips.size();
@@ -103,11 +107,13 @@ public class TipsViewModel {
         }
     }
 
+
     public int size() {
         synchronized (sync) {
             return tips.size() + solidTips.size();
         }
     }
+
 
     private class FifoHashCache<K> {
 
@@ -118,5 +124,31 @@ public class TipsViewModel {
             this.capacity = capacity;
             this.set = new LinkedHashSet<>();
         }
+        public boolean add(K key) {
+            int vacancy = this.capacity - this.set.size();
+            if (vacancy <= 0) {
+                Iterator<K> it = this.set.iterator();
+                for (int i = vacancy; i <= 0; i++) {
+                    it.next();
+                    it.remove();
+                }
+            }
+            return this.set.add(key);
+        }
+        public boolean remove(K key) {
+            return this.set.remove(key);
+        }
+
+        public int size() {
+            return this.set.size();
+        }
+
+        public Iterator<K> iterator() {
+            return this.set.iterator();
+        }
 
     }
+
+
+}
+
