@@ -88,6 +88,7 @@ public class TransactionViewModel {
         weightMagnitude = this.hash.trailingZeros();
     }
 
+
     public TransactionViewModel(final byte[] trits, Hash hash) {
         if(trits.length == 8019) {
             transaction = new com.cvt.iri.model.Transaction();
