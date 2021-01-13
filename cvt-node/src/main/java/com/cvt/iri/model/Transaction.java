@@ -107,7 +107,26 @@ public class Transaction implements Persistable {
             i += Long.BYTES;
             timestamp = Serializer.getLong(bytes, i);
             i += Long.BYTES;
-            
+
+            tag = new Hash(bytes, i, Hash.SIZE_IN_BYTES);
+            i += Hash.SIZE_IN_BYTES;
+            attachmentTimestamp = Serializer.getLong(bytes, i);
+            i += Long.BYTES;
+            attachmentTimestampLowerBound = Serializer.getLong(bytes, i);
+            i += Long.BYTES;
+            attachmentTimestampUpperBound = Serializer.getLong(bytes, i);
+            i += Long.BYTES;
+
+            validity = Serializer.getInteger(bytes, i);
+            i += Integer.BYTES;
+            type = Serializer.getInteger(bytes, i);
+            i += Integer.BYTES;
+            arrivalTime = Serializer.getLong(bytes, i);
+            i += Long.BYTES;
+            height = Serializer.getLong(bytes, i);
+            i += Long.BYTES;
+
+
         }
     }
 
