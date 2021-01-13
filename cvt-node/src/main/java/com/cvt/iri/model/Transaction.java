@@ -126,8 +126,27 @@ public class Transaction implements Persistable {
             height = Serializer.getLong(bytes, i);
             i += Long.BYTES;
 
-
+             /*
+            confirmed = bytes[i] == 1;
+            i++;
+            */
+            solid = bytes[i] == 1;
+            i++;
+            snapshot = Serializer.getInteger(bytes, i);
+            i += Integer.BYTES;
+            byte[] senderBytes = new byte[bytes.length - i];
+            if (senderBytes.length != 0) {
+                System.arraycopy(bytes, i, senderBytes, 0, senderBytes.length);
+            }
+            sender = new String(senderBytes);
+            parsed = true;
         }
-    }
 
+    }
+    @Override
+    public boolean merge() {
+        return false;
+    }
 }
+
+
