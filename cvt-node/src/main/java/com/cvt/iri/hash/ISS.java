@@ -40,6 +40,7 @@ public class ISS {
 
         final byte[] subseed = new byte[Curl.HASH_LENGTH];
 
+
         final Sponge hash = SpongeFactory.create(mode);
         hash.absorb(subseedPreimage, 0, subseedPreimage.length);
         hash.squeeze(subseed, 0, subseed.length);

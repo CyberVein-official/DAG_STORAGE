@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Created by paul on 5/15/17.
+ *
  */
 public class ApproveeViewModel implements HashesViewModel {
     private Approvee self;
@@ -34,7 +34,7 @@ public class ApproveeViewModel implements HashesViewModel {
     public static Map.Entry<Indexable, Persistable> getEntry(Hash hash, Hash hashToMerge) throws Exception {
         Approvee hashes = new Approvee();
         hashes.set.add(hashToMerge);
-        return new HashMap.SimpleEntry<>(hash, hashes);
+        return new HashMap.SimpleEntry(hash, hashes);
     }
 
     public boolean store(Tangle tangle) throws Exception {
