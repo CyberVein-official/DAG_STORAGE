@@ -108,6 +108,7 @@ public class Transaction implements Persistable {
             timestamp = Serializer.getLong(bytes, i);
             i += Long.BYTES;
 
+
             tag = new Hash(bytes, i, Hash.SIZE_IN_BYTES);
             i += Hash.SIZE_IN_BYTES;
             attachmentTimestamp = Serializer.getLong(bytes, i);
@@ -143,6 +144,7 @@ public class Transaction implements Persistable {
         }
 
     }
+
     @Override
     public boolean merge() {
         return false;
