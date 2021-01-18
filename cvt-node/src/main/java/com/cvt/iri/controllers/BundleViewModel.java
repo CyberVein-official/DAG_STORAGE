@@ -29,7 +29,24 @@ public class BundleViewModel implements HashesViewModel {
 
     public static BundleViewModel load(Tangle tangle, Indexable hash) throws Exception {
         return new BundleViewModel((Bundle) tangle.load(Bundle.class, hash), hash);
+
     }
+
+    public static Map.Entry<Indexable, Persistable> getEntry(Hash hash, Hash hashToMerge) throws Exception {
+        Bundle hashes = new Bundle();
+        hashes.set.add(hashToMerge);
+        return new HashMap.SimpleEntry<>(hash, hashes);
+    }
+
+    /*
+    public static boolean merge(Hash hash, Hash hashToMerge) throws Exception {
+        Bundle hashes = new Bundle();
+        hashes.set = new HashSet<>(Collections.singleton(hashToMerge));
+        return Tangle.instance().merge(hashes, hash);
+    }
+    */
+
+
 
 
 }

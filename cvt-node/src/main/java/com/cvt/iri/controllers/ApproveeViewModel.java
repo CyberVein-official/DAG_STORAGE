@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Created by paul on 5/15/17.
+ *
  */
 public class ApproveeViewModel implements HashesViewModel {
     private Approvee self;
