@@ -46,27 +46,6 @@ public class BundleViewModel implements HashesViewModel {
     }
     */
 
-    public boolean store(Tangle tangle) throws Exception {
-        return tangle.save(self, hash);
-    }
-
-    public int size() {
-        return self.set.size();
-    }
-
-    public boolean addHash(Hash theHash) {
-        return getHashes().add(theHash);
-    }
-
-    public Indexable getIndex() {
-        return hash;
-    }
-
-    public Set<Hash> getHashes() {
-        return self.set;
-    }
-
-    
 
 
 
