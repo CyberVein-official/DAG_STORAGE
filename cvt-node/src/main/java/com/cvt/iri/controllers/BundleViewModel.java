@@ -54,6 +54,7 @@ public class BundleViewModel implements HashesViewModel {
         return self.set.size();
     }
 
+
     public boolean addHash(Hash theHash) {
         return getHashes().add(theHash);
     }
