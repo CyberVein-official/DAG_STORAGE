@@ -44,6 +44,4 @@ public class GetNodeInfoResponse extends AbstractResponse {
         return appVersion;
     }
 
-
-
 }

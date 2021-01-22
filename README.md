@@ -9,5 +9,3 @@ CyberVeinDag is a side chain implementation based on DAG.
 Currently development is on very initial stage. Main modules of repository are p2p network protocol, hash algorithm, storge , account management and consensus algorithm.
 
 There is no testnet running currently.
-
-test
