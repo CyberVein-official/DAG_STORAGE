@@ -31,6 +31,32 @@ public class GetBalancesAndFormatResponse extends AbstractResponse {
     public List<Input> getInputs() {
         return inputs;
     }
+    /**
+     * Sets the input.
+     *
+     * @param input The input.
+     */
+    public void setInputs(List<Input> input) {
+        this.inputs = inputs;
+    }
+
+    /**
+     * Gets the total balance.
+     *
+     * @return The total balance.
+     */
+    public long getTotalBalance() {
+        return totalBalance;
+    }
+
+    /**
+     * Sets the total balance.
+     *
+     * @param totalBalance The total balance.
+     */
+    public void setTotalBalance(long totalBalance) {
+        this.totalBalance = totalBalance;
+    }
 
 
 }
