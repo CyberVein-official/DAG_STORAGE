@@ -20,6 +20,8 @@ public class StateDiff implements Persistable {
                 .reduce(ArrayUtils::addAll)
                 .orElse(new byte[0]);
     }
+
+
     public void read(byte[] bytes) {
         int i;
         state = new HashMap<>();
@@ -31,4 +33,17 @@ public class StateDiff implements Persistable {
         }
     }
 
+    @Override
+    public byte[] metadata() {
+        return new byte[0];
+    }
+
+    @Override
+    public void readMetadata(byte[] bytes) {
+    }
+
+    @Override
+    public boolean merge() {
+        return false;
+    }
 }
