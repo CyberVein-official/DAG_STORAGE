@@ -39,4 +39,22 @@ public class LibPdpServiceImpl implements PdpService {
 		}
 	}
 
+
+	@Override
+	public void prove(String filePath) throws PdpException {
+		if(StringUtils.isBlank(this.keypath)) {
+			throw new PdpException(KEY_PATH_NULL);
+		}
+		int ret;
+		if ((ret = PDPproof(filePath, keypath)) != 0) {
+			throw new PdpException(ret);
+		}
+	}
+
+	private native int PDPstoreFile(String filename, String keypath);
+
+	private native int PDPchallenge(String filename, String keypath);
+
+	private native int PDPproof(String filename, String keypath);
+
 }
