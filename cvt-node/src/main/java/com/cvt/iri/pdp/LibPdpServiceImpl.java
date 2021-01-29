@@ -13,6 +13,30 @@ public class LibPdpServiceImpl implements PdpService {
 
 	}
 
+	public LibPdpServiceImpl(String keypath) {
+		this.keypath = keypath;
+	}
 
+	@Override
+	public void storeFile(String filePath) throws PdpException {
+		if(StringUtils.isBlank(this.keypath)) {
+			throw new PdpException(KEY_PATH_NULL);
+		}
+		int ret;
+		if ((ret = PDPstoreFile(filePath, keypath)) != 0) {
+			throw new PdpException(ret);
+		}
+	}
+
+	@Override
+	public void challenge(String filePath) throws PdpException {
+		if(StringUtils.isBlank(this.keypath)) {
+			throw new PdpException(KEY_PATH_NULL);
+		}
+		int ret;
+		if ((ret = PDPchallenge(filePath, keypath)) != 0) {
+			throw new PdpException(ret);
+		}
+	}
 
 }
