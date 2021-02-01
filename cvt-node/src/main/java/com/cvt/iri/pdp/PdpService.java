@@ -15,5 +15,11 @@ public interface PdpService {
      *
      * @param filePath 存储的文件路径
      */
+    void storeFile(String filePath) throws PdpException;
 
+    /**
+     * 发起证明挑战
+     *
+     * @param filePath 存储的文件路径
+     */
 }
