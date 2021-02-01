@@ -13,7 +13,6 @@ public class LibPdpServiceImpl implements PdpService {
 
 	}
 
-
 	public LibPdpServiceImpl(String keypath) {
 		this.keypath = keypath;
 	}
@@ -40,6 +39,7 @@ public class LibPdpServiceImpl implements PdpService {
 		}
 	}
 
+
 	@Override
 	public void prove(String filePath) throws PdpException {
 		if(StringUtils.isBlank(this.keypath)) {
@@ -56,4 +56,6 @@ public class LibPdpServiceImpl implements PdpService {
 	private native int PDPchallenge(String filename, String keypath);
 
 	private native int PDPproof(String filename, String keypath);
+
+
 }
