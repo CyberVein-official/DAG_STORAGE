@@ -18,5 +18,15 @@ public interface NetworkConfig extends Config {
      */
     int getTcpReceiverPort();
 
+    /**
+     * @return Descriptions#P_REMOVE_REQUEST
+     */
+    double getpRemoveRequest();
+
+    /**
+     * @return Descriptions#SEND_LIMIT
+     */
+    int getSendLimit();
+
 
 }
