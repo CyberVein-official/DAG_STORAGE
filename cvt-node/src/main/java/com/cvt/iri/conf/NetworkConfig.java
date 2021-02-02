@@ -34,4 +34,14 @@ public interface NetworkConfig extends Config {
      */
     int getMaxPeers();
 
+    /**
+     * @return Descriptions#DNS_REFRESHER_ENABLED
+     */
+    boolean isDnsRefresherEnabled();
+
+    /**
+     * @return Descriptions#DNS_RESOLUTION_ENABLED
+     */
+    boolean isDnsResolutionEnabled();
+
 }
