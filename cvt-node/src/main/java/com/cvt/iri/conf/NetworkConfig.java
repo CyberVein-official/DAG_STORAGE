@@ -29,4 +29,9 @@ public interface NetworkConfig extends Config {
     int getSendLimit();
 
 
+    /**
+     * @return Descriptions#MAX_PEERS
+     */
+    int getMaxPeers();
+
 }
