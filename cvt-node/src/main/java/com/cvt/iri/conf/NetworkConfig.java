@@ -62,4 +62,6 @@ public interface NetworkConfig extends Config {
      * @return Descriptions#Q_SIZE_NODE
      */
 
+    int getqSizeNode();
+
 }
