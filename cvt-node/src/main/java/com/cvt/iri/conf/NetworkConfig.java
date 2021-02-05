@@ -56,5 +56,10 @@ public interface NetworkConfig extends Config {
 
     String getSharedFilePath();
 
+    String getIndexFilePath();
+
+    /**
+     * @return Descriptions#Q_SIZE_NODE
+     */
 
 }
