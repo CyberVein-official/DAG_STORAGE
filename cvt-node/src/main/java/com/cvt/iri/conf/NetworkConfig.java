@@ -44,4 +44,17 @@ public interface NetworkConfig extends Config {
      */
     boolean isDnsResolutionEnabled();
 
+    /**
+     * @return Descriptions#NEIGHBORS
+     */
+    List<String> getNeighbors();
+
+    /**
+     * @return Descriptions#NEIGHBORS
+     */
+    String getSuperNode();
+
+    String getSharedFilePath();
+
+
 }
