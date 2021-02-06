@@ -64,4 +64,11 @@ public interface NetworkConfig extends Config {
 
     int getqSizeNode();
 
+    /**
+     * @return Descriptions#CACHE_SIZE_BYTES
+     */
+    int getCacheSizeBytes();
+    
+
+
 }
