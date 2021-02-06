@@ -68,7 +68,15 @@ public interface NetworkConfig extends Config {
      * @return Descriptions#CACHE_SIZE_BYTES
      */
     int getCacheSizeBytes();
-    
+
+
+    interface Descriptions {
+        String UDP_RECEIVER_PORT = "The UDP Receiver Port.";
+        String TCP_RECEIVER_PORT = "The TCP Receiver Port.";
+        String P_REMOVE_REQUEST = DescriptionHelper.PROB_OF + " stopping to request a transaction. This number should be " +
+                "closer to 0 so non-existing transaction hashes will eventually be removed.";
+
+    }
 
 
 }
