@@ -79,6 +79,10 @@ public interface NetworkConfig extends Config {
         String MAX_PEERS = "The maximum number of non mutually tethered connections allowed. Works only in testnet mode";
         String DNS_REFRESHER_ENABLED = "Reconnect to neighbors that have dynamic IPs.";
         String DNS_RESOLUTION_ENABLED = "Enable using DNS for neighbor peering.";
+        String NEIGHBORS = "Urls of peer cvt nodes.";
+        String Q_SIZE_NODE = "The size of the REPLY, BROADCAST, and RECEIVE network queues.";
+        String P_DROP_CACHE_ENTRY = DescriptionHelper.PROB_OF + "dropping recently seen transactions out of the network cache.";
+        String CACHE_SIZE_BYTES = "The size of the network cache in bytes";
 
     }
 
