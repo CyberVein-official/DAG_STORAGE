@@ -23,5 +23,12 @@ public class SeedAddressPair implements Indexable {
     }
 
 
+    @Override
+    public void read(byte[] bytes) {
+        String str = new String(bytes);
+        String[] pair = str.split(";");
+        this.seed = pair[0];
+        this.address = pair[1];
+    }
 
 }
