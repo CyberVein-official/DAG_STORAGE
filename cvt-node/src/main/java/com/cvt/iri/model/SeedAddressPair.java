@@ -10,6 +10,17 @@ public class SeedAddressPair implements Indexable {
     private String seed;
     private String address;
 
+    public SeedAddressPair(String seed, String address) {
+        this.seed = seed;
+        this.address = address;
+    }
+
+    public static final String SEP = ";";
+
+    @Override
+    public byte[] bytes() {
+        return (seed + SEP + address).getBytes();
+    }
 
 
 
