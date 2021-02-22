@@ -36,5 +36,15 @@ public class SeedAddressPair implements Indexable {
         return null;
     }
 
+    @Override
+    public Indexable decremented() {
+        return null;
+    }
+
+    public String getSeed() {
+        return seed;
+    }
+
+
 
 }
