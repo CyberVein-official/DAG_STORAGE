@@ -45,6 +45,13 @@ public class SeedAddressPair implements Indexable {
         return seed;
     }
 
+    public String getAddress() {
+        return address;
+    }
 
+    @Override
+    public int compareTo(Indexable o) {
+        return 0;
+    }
 
 }
