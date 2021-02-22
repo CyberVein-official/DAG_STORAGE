@@ -31,4 +31,10 @@ public class SeedAddressPair implements Indexable {
         this.address = pair[1];
     }
 
+    @Override
+    public Indexable incremented() {
+        return null;
+    }
+
+
 }
