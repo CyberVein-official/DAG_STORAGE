@@ -22,7 +22,17 @@ public class CvtUnitConverter {
         return convertUnits(amountInSource, toUnit);
     }
 
-
+    
+    /**
+     * Convert unit.
+     *
+     * @param amount The amount.
+     * @param toUnit The target unit.
+     * @return The specified amount in the target unit.
+     **/
+    private static long convertUnits(long amount, CvtUnits toUnit) {
+        return (long) (amount / Math.pow(10, toUnit.getValue()));
+    }
 
 
 }
