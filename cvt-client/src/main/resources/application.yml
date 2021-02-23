@@ -1,0 +1,16 @@
+
+cvt:
+  protocol: http
+  host: 127.0.0.1
+  port: 14263
+
+upload:
+  tmp-path: E:/cvt/tmp
+  shared-upload-path: E:/cvt/shared/
+  index-path: E:/cvt/super/index
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 1GB
+      max-request-size: 1GB
