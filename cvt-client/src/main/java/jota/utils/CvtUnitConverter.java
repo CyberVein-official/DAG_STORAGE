@@ -22,7 +22,8 @@ public class CvtUnitConverter {
         return convertUnits(amountInSource, toUnit);
     }
 
-    
+
+
     /**
      * Convert unit.
      *
@@ -33,6 +34,20 @@ public class CvtUnitConverter {
     private static long convertUnits(long amount, CvtUnits toUnit) {
         return (long) (amount / Math.pow(10, toUnit.getValue()));
     }
+
+    /**
+     * Convert the cvt amount to text.
+     *
+     * @param amount   The amount.
+     * @param extended Extended length.
+     * @return The specified amount in the target unit.
+     **/
+    public static String convertRawCvtAmountToDisplayText(long amount, boolean extended) {
+        CvtUnits unit = findOptimalCvtUnitToDisplay(amount);
+        double amountInDisplayUnit = convertAmountTo(amount, unit);
+        return createAmountWithUnitDisplayText(amountInDisplayUnit, unit, extended);
+    }
+
 
 
 }
