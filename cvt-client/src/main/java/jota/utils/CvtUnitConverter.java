@@ -49,5 +49,20 @@ public class CvtUnitConverter {
     }
 
 
+    /**
+     * Convert amount to target unit.
+     *
+     * @param amount The amount.
+     * @return The target unit.
+     **/
+    public static double convertAmountTo(long amount, CvtUnits target) {
+        return amount / Math.pow(10, target.getValue());
+    }
+
+
+
+
+
+
 
 }
