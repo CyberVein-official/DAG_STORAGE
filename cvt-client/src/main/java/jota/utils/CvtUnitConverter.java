@@ -94,6 +94,22 @@ public class CvtUnitConverter {
         return result;
     }
 
+    /**
+     * Finds the optimal unit to display the specified amount in.
+     *
+     * @param amount The amount.
+     * @return The optimal CvtUnit.
+     **/
+    public static CvtUnits findOptimalCvtUnitToDisplay(long amount) {
+        int length = String.valueOf(amount).length();
+
+        if (amount < 0) {// do not count "-" sign
+            length -= 1;
+        }
+
+
+    }
+
 
 
 
