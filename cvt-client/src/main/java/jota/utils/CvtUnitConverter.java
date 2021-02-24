@@ -59,6 +59,21 @@ public class CvtUnitConverter {
         return amount / Math.pow(10, target.getValue());
     }
 
+    /**
+     * Create amount with unit text.
+     *
+     * @param amountInUnit The amount in units.
+     * @param unit         The unit.
+     * @param extended     Extended length.
+     * @return The target unit.
+     **/
+    private static String createAmountWithUnitDisplayText(double amountInUnit, CvtUnits unit, boolean extended) {
+        String result = createAmountDisplayText(amountInUnit, unit, extended);
+        result += " " + unit.getUnit();
+        return result;
+    }
+
+
 
 
 
