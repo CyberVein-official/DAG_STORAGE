@@ -74,6 +74,26 @@ public class CvtUnitConverter {
     }
 
 
+    /**
+     * Create amount text.
+     *
+     * @param amountInUnit The amount in units.
+     * @param unit         The unit.
+     * @param extended     Extended length.
+     * @return The target unit.
+     **/
+    public static String createAmountDisplayText(double amountInUnit, CvtUnits unit, boolean extended) {
+        DecimalFormat df;
+        if (extended) df = new DecimalFormat("##0.##################");
+        else
+            df = new DecimalFormat("##0.##");
+
+        String result = "";
+        // display unit as integer if value is between 1-999 or in decimal format
+        result += unit == CvtUnits.CVT ? (long) amountInUnit : df.format(amountInUnit);
+        return result;
+    }
+
 
 
 
