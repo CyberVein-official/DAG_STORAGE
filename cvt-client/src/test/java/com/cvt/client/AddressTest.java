@@ -32,4 +32,21 @@ public class AddressTest extends BaseTest {
         log.info(new Gson().toJson(response));
     }
 
+    @Test
+    public void attach_all_address() {
+        seedBalanceLoader.getSeedBalanceMap().values().forEach(item -> {
+            item.getAddressBalanceList().forEach(it -> {
+                int count = 0;
+                Transfer transfer = new Transfer(it.getAddress(), 0, TrytesConverter.asciiToTrytes("Address-" + (count++)), testTag);
+                try {
+                    doTransfer(rndSeed(), Collections.singletonList(transfer), null);
+                    log.info("初始化地址: " + it.getAddress() + " 成功");
+                } catch (Exception e) {
+                    log.error("初始化地址错误", e);
+                }
+            });
+        });
+        log.info(StringUtils.center("初步化地址完成", 120, "="));
+    }
+
 }
