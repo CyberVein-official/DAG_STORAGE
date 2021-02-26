@@ -25,5 +25,11 @@ public class AddressTest extends BaseTest {
         log.info(new Gson().toJson(response));
     }
 
+    @Test
+    public void test_gen_uncheck_address() throws Exception {
+        String seed = "SEED99999999999999999999999999999999999999999999999999999999999999999999999999999";
+        GetNewAddressResponse response = cvtAPI.getAddressesUnchecked(seed, 2, false, 0, 10);
+        log.info(new Gson().toJson(response));
+    }
 
 }
