@@ -107,6 +107,22 @@ public class CvtUnitConverter {
             length -= 1;
         }
 
+        CvtUnits units = CvtUnits.CVT;
+
+        if (length >= 1 && length <= 3) {
+            units = CvtUnits.CVT;
+        } else if (length > 3 && length <= 6) {
+            units = CvtUnits.KILO_CVT;
+        } else if (length > 6 && length <= 9) {
+            units = CvtUnits.MEGA_CVT;
+        } else if (length > 9 && length <= 12) {
+            units = CvtUnits.GIGA_CVT;
+        } else if (length > 12 && length <= 15) {
+            units = CvtUnits.TERA_CVT;
+        } else if (length > 15 && length <= 18) {
+            units = CvtUnits.PETA_CVT;
+        }
+        return units;
 
     }
 
