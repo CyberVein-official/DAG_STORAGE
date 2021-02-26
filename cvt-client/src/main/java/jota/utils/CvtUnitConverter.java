@@ -111,7 +111,9 @@ public class CvtUnitConverter {
 
         if (length >= 1 && length <= 3) {
             units = CvtUnits.CVT;
+
         } else if (length > 3 && length <= 6) {
+
             units = CvtUnits.KILO_CVT;
         } else if (length > 6 && length <= 9) {
             units = CvtUnits.MEGA_CVT;
