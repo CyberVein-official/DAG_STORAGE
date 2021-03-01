@@ -46,8 +46,12 @@ public class BaseTest {
     @Autowired
     protected MilestoneManager milestoneManager;
 
+    String testTag = "CVTJAVASPAM999999999999999";
+    String testMessage = "JUSTANOTHERCVTTEST";
 
-
+    int SECURITY_LEVEL = 2;
+    int DEPTH = 9;
+    int MIN_WEIGHT = 14;
 
 
 
