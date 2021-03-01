@@ -21,5 +21,8 @@ public class BalanceTest extends BaseTest {
     @Test
     public void get_balance() throws Exception {
 
+        GetBalancesAndFormatResponse response = loadBalance(SUPER_SEED);
+        log.info(new Gson().toJson(response));
+
     }
 }
