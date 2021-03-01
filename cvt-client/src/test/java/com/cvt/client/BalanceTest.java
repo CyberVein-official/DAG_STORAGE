@@ -23,6 +23,8 @@ public class BalanceTest extends BaseTest {
 
         GetBalancesAndFormatResponse response = loadBalance(SUPER_SEED);
         log.info(new Gson().toJson(response));
-
     }
+
+
+
 }
