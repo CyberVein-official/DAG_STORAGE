@@ -58,6 +58,10 @@ public class BaseTest {
         return cvtAPI.getInputs(seed, SECURITY_LEVEL, 0, 0, 0);
     }
 
+    GetAccountDataResponse getAccountDataResponse(String seed, int threshold) throws Exception {
+        return cvtAPI.getAccountData(seed, SECURITY_LEVEL, 0, false, 0, true, 0, 0, true, threshold);
+    }
+
 
 
 
