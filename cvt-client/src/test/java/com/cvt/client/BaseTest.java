@@ -54,5 +54,11 @@ public class BaseTest {
     int MIN_WEIGHT = 14;
 
 
+    protected GetBalancesAndFormatResponse loadBalance(String seed) throws Exception {
+        return cvtAPI.getInputs(seed, SECURITY_LEVEL, 0, 0, 0);
+    }
+
+
+
 
 }
