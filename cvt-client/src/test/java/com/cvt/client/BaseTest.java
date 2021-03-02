@@ -62,6 +62,13 @@ public class BaseTest {
         return cvtAPI.getAccountData(seed, SECURITY_LEVEL, 0, false, 0, true, 0, 0, true, threshold);
     }
 
+    protected String rndSeed(String... exceptSeeds) {
+        Set<String> seedSet = seedBalanceLoader.getSeeds();
+        if (null != exceptSeeds) {
+            seedSet.removeAll(Sets.newLinkedHashSet(exceptSeeds));
+        }
+        return Lists.newArrayList(seedSet).get(new Random().nextInt(seedSet.size()));
+    }
 
 
 
