@@ -70,6 +70,10 @@ public class BaseTest {
         return Lists.newArrayList(seedSet).get(new Random().nextInt(seedSet.size()));
     }
 
+    protected SendTransferResponse doTransfer(String seed, List<Transfer> transfer, String addressRemainder) throws Exception {
+        return cvtAPI.sendTransfer(seed, SECURITY_LEVEL, DEPTH, MIN_WEIGHT,
+                transfer, null, addressRemainder, false, false, null);
+    }
 
 
 }
