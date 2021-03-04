@@ -75,5 +75,14 @@ public class BaseTest {
                 transfer, null, addressRemainder, false, false, null);
     }
 
+    protected void do_random_transfer_times(int times, String... exceptSeeds) throws Exception {
+        int count = 1;
+        while (count++ <= times) {
+            do_random_transfer(exceptSeeds);
+            TimeUnit.SECONDS.sleep(5);
+            log.info(StringUtils.center(" Transfer Done [ " + count + " ]Times ", 120, "="));
+        }
+    }
+
 
 }
