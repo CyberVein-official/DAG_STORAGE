@@ -84,5 +84,13 @@ public class BaseTest {
         }
     }
 
+    protected void do_random_transfer(String... exceptSeeds) throws Exception {
+
+        // seed1 向 seed2 转账
+        String rndSeed1;
+        String rndSeed2;
+        GetBalancesAndFormatResponse gbr1_before;
+
+    }
 
 }
