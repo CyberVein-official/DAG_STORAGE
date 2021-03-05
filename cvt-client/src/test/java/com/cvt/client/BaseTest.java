@@ -91,6 +91,15 @@ public class BaseTest {
         String rndSeed2;
         GetBalancesAndFormatResponse gbr1_before;
 
+        do {
+            rndSeed1 = rndSeed(exceptSeeds);
+
+            // 校验余额是否大于 0
+            gbr1_before = loadBalance(rndSeed1);
+            if (gbr1_before.getTotalBalance() <= 0) {
+                log.info("NO Enough Balance for Seed {}", rndSeed1);
+            }
+
     }
 
 }
