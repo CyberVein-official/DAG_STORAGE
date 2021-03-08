@@ -105,6 +105,9 @@ public class BaseTest {
                 rndSeed2 = rndSeed(exceptSeeds);
             } while (rndSeed1.equals(rndSeed2) || SeedBalanceLoader.LAST_SEED.equals(rndSeed2));
 
+            // 每次都根据 SEED2 生成新的地址
+            GetNewAddressResponse addressResponse = cvtAPI.generateNewAddresses(rndSeed2, SECURITY_LEVEL, false, 1);
+            String newSeed2Address = addressResponse.getAddresses().get(0);
 
     }
 
