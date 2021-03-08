@@ -111,6 +111,11 @@ public class BaseTest {
 
             // 随机生成一个金额（小于 SEED1 的余额）
             int amount = new Random().nextInt(Long.valueOf(gbr1_before.getTotalBalance()).intValue());
+
+
+            Transfer transfer = new Transfer(newSeed2Address, amount, TrytesConverter.asciiToTrytes(":Hello" + amount +":"), testTag);
+            SendTransferResponse response = doTransfer(rndSeed1,
+                    Collections.singletonList(transfer), null);
     }
 
 }
