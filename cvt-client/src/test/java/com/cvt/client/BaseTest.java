@@ -99,6 +99,12 @@ public class BaseTest {
             if (gbr1_before.getTotalBalance() <= 0) {
                 log.info("NO Enough Balance for Seed {}", rndSeed1);
             }
+            while (SeedBalanceLoader.LAST_SEED.equals(rndSeed1) || gbr1_before.getTotalBalance() <= 0);
+
+            do {
+                rndSeed2 = rndSeed(exceptSeeds);
+            } while (rndSeed1.equals(rndSeed2) || SeedBalanceLoader.LAST_SEED.equals(rndSeed2));
+
 
     }
 
