@@ -109,6 +109,8 @@ public class BaseTest {
             GetNewAddressResponse addressResponse = cvtAPI.generateNewAddresses(rndSeed2, SECURITY_LEVEL, false, 1);
             String newSeed2Address = addressResponse.getAddresses().get(0);
 
+            // 随机生成一个金额（小于 SEED1 的余额）
+            int amount = new Random().nextInt(Long.valueOf(gbr1_before.getTotalBalance()).intValue());
     }
 
 }
