@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
  * 测试基类
  *
  * @author cvt admin
- * Time: 2018/11/10 : 11:27
+ *
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
