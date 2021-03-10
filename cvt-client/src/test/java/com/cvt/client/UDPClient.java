@@ -25,5 +25,12 @@ public class UDPClient {
         DatagramSocket socket = new DatagramSocket();
         //4.向服务器端发送数据报
         socket.send(packet);
+
+        /*
+         * 接收服务器端响应的数据
+         */
+        //1.创建数据报，用于接收服务器端响应的数据
+        byte[] data2 = new byte[1024];
+        DatagramPacket packet2 = new DatagramPacket(data2, data2.length);
     }
 }
