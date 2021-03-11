@@ -38,5 +38,7 @@ public class UDPClient {
         //3.读取数据
         String reply = new String(data2, 0, packet2.getLength());
         System.out.println("我是客户端，服务器说：" + reply);
+        //4.关闭资源
+        socket.close();
     }
 }
