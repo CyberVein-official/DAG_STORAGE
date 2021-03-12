@@ -18,7 +18,10 @@ public class UDPServer {
 
         DatagramPacket packet = new DatagramPacket(data, data.length);
 
+        System.out.println("**** 服务端已经启动 ****");
 
+        // 会一直阻塞，直到接收到数据
+        socket.receive(packet);
 
     }
 }
