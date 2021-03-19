@@ -22,6 +22,7 @@ public class UDPServer {
 
         // 会一直阻塞，直到接收到数据
         socket.receive(packet);
-
+        String info = new String(data, 0, packet.getLength());
+        System.out.println("**** Message From Client: " + info);
     }
 }
