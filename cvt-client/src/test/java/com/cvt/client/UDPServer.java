@@ -24,5 +24,8 @@ public class UDPServer {
         socket.receive(packet);
         String info = new String(data, 0, packet.getLength());
         System.out.println("**** Message From Client: " + info);
+
+        InetAddress address = packet.getAddress();
+        int port = packet.getPort();
     }
 }
