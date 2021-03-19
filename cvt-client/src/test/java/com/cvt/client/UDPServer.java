@@ -27,5 +27,10 @@ public class UDPServer {
 
         InetAddress address = packet.getAddress();
         int port = packet.getPort();
+        byte[] data2 = "Welcome!".getBytes();
+        DatagramPacket packet2 = new DatagramPacket(data2, data2.length, address, port);
+
+
+
     }
 }
